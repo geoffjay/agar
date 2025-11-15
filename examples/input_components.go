@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/geoffjay/agar/tui"
@@ -79,6 +80,33 @@ func main() {
 	fmt.Printf("\nYou selected: %s (index: %d)\n\n",
 		optionsResult.GetAnswer(),
 		optionsResult.GetSelectedIndex())
+
+	// Example 5: Multi-Select Input
+	fmt.Println("=== Example 5: Multi-Select Options ===\n")
+	multiSelectModel := tui.NewMultiSelectInput(
+		"Which features would you like to include?",
+		"Select all that apply (Space to toggle, Enter to confirm)",
+		[]string{
+			"User Authentication",
+			"Database Integration",
+			"API Endpoints",
+			"Real-time Updates",
+			"File Upload",
+			"Reporting Dashboard",
+			"Mobile Support",
+		},
+	)
+	p = tea.NewProgram(multiSelectModel)
+	finalModel, err = p.Run()
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		os.Exit(1)
+	}
+	multiSelectResult := finalModel.(tui.MultiSelectModel)
+	selected := multiSelectResult.GetAnswers()
+	fmt.Printf("\nYou selected %d items:\n- %s\n\n",
+		len(selected),
+		strings.Join(selected, "\n- "))
 
 	fmt.Println("=== All examples completed! ===")
 }

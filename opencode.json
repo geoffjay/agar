@@ -1,5 +1,16 @@
 {
   "$schema": "https://opencode.ai/config.json",
+  "theme": "kanagawa",
+  "lsp": {
+    "markdown": {
+      "command": ["markdown-oxide"],
+      "extensions": [".md"]
+    },
+    "baml": {
+      "command": ["baml-cli", "lsp"],
+      "extensions": [".baml"]
+    }
+  },
   "provider": {
     "ollama": {
       "npm": "@ai-sdk/openai-compatible",
