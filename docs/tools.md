@@ -2,20 +2,11 @@
 
 ## Overview
 
-The Agar library provides a comprehensive tools framework for AI agents with essential capabilities for file operations, system interaction, task management, and extensibility for custom tools. All tools implement a consistent interface and are fully tested with 83.1% code coverage.
-
-## Implementation Status
-
-✅ **Phase 1 Complete** - All core tools implemented and tested
-- 7 core tools implemented
-- 148 unit tests (all passing)
-- 83.1% test coverage
-- Thread-safe tool registry
-- Production-ready with security features
+The Agar library provides a comprehensive tools framework for AI agents with essential capabilities for file operations, system interaction, and task management. All tools implement a consistent interface and include built-in security features.
 
 ## Core Interface
 
-All tools implement the `Tool` interface for consistency:
+All tools implement the `Tool` interface:
 
 ```go
 type Tool interface {
@@ -29,13 +20,18 @@ type Tool interface {
 
 ## Tool Registry
 
-Thread-safe registry for managing tools:
+The registry provides thread-safe management of tools:
 
 ```go
+// Create and register tools
 registry := tools.NewToolRegistry()
 registry.Register(tools.NewReadTool())
 registry.Register(tools.NewWriteTool())
-// ... register other tools
+registry.Register(tools.NewDeleteTool())
+registry.Register(tools.NewListTool())
+registry.Register(tools.NewGlobTool())
+registry.Register(tools.NewShellTool())
+registry.Register(tools.NewTaskListTool())
 
 // Execute a tool
 tool, err := registry.Get("read")
@@ -47,110 +43,143 @@ params := json.RawMessage(`{"path": "file.txt"}`)
 result, err := tool.Execute(context.Background(), params)
 ```
 
-## Implemented Tools
+## Available Tools
 
 ### File System Tools
 
-#### 1. Read Tool ✅
+#### Read Tool
 
-**Purpose**: Read files from the local filesystem
+Read files from the local filesystem with automatic format detection.
 
 **Features**:
-- Automatic format detection (text/binary)
-- Line range selection (offset and limit)
+- Automatic format detection (text/binary based on file extension and content)
+- Line range selection with offset and limit
 - Base64 encoding for binary files
-- Support for text formats: txt, json, yaml, csv, md, html, js, go, py, etc.
+- Support for common text formats: txt, json, yaml, csv, md, html, js, go, py, rb, java, c, cpp, sh, etc.
 
 **Parameters**:
 ```json
 {
-  "path": "string (required)",
-  "format": "text|binary|auto (default: auto)",
-  "offset": "integer (line offset, default: 0)",
-  "limit": "integer (lines to read, 0 = all)"
+  "path": "string (required) - Path to the file to read",
+  "format": "string (optional) - 'text', 'binary', or 'auto' (default: auto)",
+  "offset": "integer (optional) - Line offset for partial reads (default: 0)",
+  "limit": "integer (optional) - Number of lines to read, 0 = all (default: 0)"
 }
 ```
 
 **Usage Example**:
 ```go
 tool := tools.NewReadTool()
-params := json.RawMessage(`{
-    "path": "/path/to/file.txt",
-    "offset": 10,
-    "limit": 20
-}`)
+
+// Read entire file
+params := json.RawMessage(`{"path": "/path/to/file.txt"}`)
 result, err := tool.Execute(ctx, params)
 
 readResult := result.(*tools.ReadResult)
 fmt.Println(readResult.Content)
-fmt.Printf("Lines: %d of %d\n", readResult.Lines, readResult.TotalLines)
-```
+fmt.Printf("Read %d of %d total lines\n", readResult.Lines, readResult.TotalLines)
 
-**Test Coverage**: 15 tests, all passing
+// Read specific line range
+params = json.RawMessage(`{
+    "path": "/path/to/large-file.log",
+    "offset": 100,
+    "limit": 50
+}`)
+result, err = tool.Execute(ctx, params)
+
+// Read binary file
+params = json.RawMessage(`{
+    "path": "/path/to/image.png",
+    "format": "binary"
+}`)
+result, err = tool.Execute(ctx, params)
+// Content will be base64 encoded
+```
 
 ---
 
-#### 2. Write Tool ✅
+#### Write Tool
 
-**Purpose**: Write content to files with safety features
+Write content to files with safety features including atomic writes and backups.
 
 **Features**:
 - Text and binary file writing
-- Append mode support
+- Append mode for adding to existing files
 - Automatic directory creation
-- Backup existing files before overwriting
+- Optional backup of existing files before overwriting
 - Atomic writes using temporary files
 - Base64 decoding for binary content
 
 **Parameters**:
 ```json
 {
-  "path": "string (required)",
-  "content": "string (required)",
-  "mode": "write|append (default: write)",
-  "encoding": "utf-8|base64 (default: utf-8)",
-  "backup": "boolean (default: false)"
+  "path": "string (required) - Path to the file to write",
+  "content": "string (required) - Content to write",
+  "mode": "string (optional) - 'write' or 'append' (default: write)",
+  "encoding": "string (optional) - 'utf-8' or 'base64' (default: utf-8)",
+  "backup": "boolean (optional) - Create backup before overwriting (default: false)"
 }
 ```
 
 **Usage Example**:
 ```go
 tool := tools.NewWriteTool()
+
+// Write text file
 params := json.RawMessage(`{
     "path": "/path/to/file.txt",
-    "content": "Hello, World!",
-    "backup": true
+    "content": "Hello, World!"
 }`)
 result, err := tool.Execute(ctx, params)
 
 writeResult := result.(*tools.WriteResult)
-fmt.Printf("Wrote %d bytes\n", writeResult.BytesWritten)
+fmt.Printf("Wrote %d bytes to %s\n", writeResult.BytesWritten, writeResult.Path)
+
+// Write with backup
+params = json.RawMessage(`{
+    "path": "/path/to/config.json",
+    "content": "{\"key\": \"value\"}",
+    "backup": true
+}`)
+result, err = tool.Execute(ctx, params)
 if writeResult.BackupPath != "" {
     fmt.Printf("Backup created at: %s\n", writeResult.BackupPath)
 }
-```
 
-**Test Coverage**: 12 tests, all passing
+// Append to existing file
+params = json.RawMessage(`{
+    "path": "/path/to/log.txt",
+    "content": "New log entry\n",
+    "mode": "append"
+}`)
+
+// Write binary file (base64 encoded content)
+params = json.RawMessage(`{
+    "path": "/path/to/file.bin",
+    "content": "AQIDBA==",
+    "encoding": "base64"
+}`)
+```
 
 ---
 
-#### 3. Delete Tool ✅
+#### Delete Tool
 
-**Purpose**: Delete files and directories with safety features
+Delete files and directories with safety features including dry-run mode.
 
 **Features**:
 - File and directory deletion
 - Recursive directory deletion
-- Dry-run mode for safety testing
-- File counting before deletion
+- Dry-run mode to preview what would be deleted
+- Reports number of files/directories affected
 
 **Parameters**:
 ```json
 {
-  "path": "string (required)",
-  "recursive": "boolean (default: false)",
-  "confirm": "boolean (for future use)",
-  "dry_run": "boolean (default: false)"
+  "path": "string (required) - Path to delete",
+  "recursive": "boolean (optional) - Enable recursive deletion for directories (default: false)",
+  "confirm": "boolean (optional) - Reserved for future use",
+  "dry_run": "boolean (optional) - Preview deletion without removing files (default: false)"
 }
 ```
 
@@ -158,7 +187,7 @@ if writeResult.BackupPath != "" {
 ```go
 tool := tools.NewDeleteTool()
 
-// First, do a dry-run to see what would be deleted
+// Preview what would be deleted
 params := json.RawMessage(`{
     "path": "/path/to/directory",
     "recursive": true,
@@ -167,202 +196,253 @@ params := json.RawMessage(`{
 result, err := tool.Execute(ctx, params)
 
 deleteResult := result.(*tools.DeleteResult)
-fmt.Printf("Would delete %d items\n", deleteResult.FilesRemoved)
+fmt.Printf("Would delete %d items:\n", deleteResult.FilesRemoved)
 for _, item := range deleteResult.Items {
-    fmt.Println(item)
+    fmt.Printf("  - %s\n", item)
 }
 
-// Then perform actual deletion
+// Perform actual deletion
 params = json.RawMessage(`{
     "path": "/path/to/directory",
     "recursive": true
 }`)
 result, err = tool.Execute(ctx, params)
-```
 
-**Test Coverage**: 10 tests, all passing
+// Delete single file
+params = json.RawMessage(`{"path": "/path/to/file.txt"}`)
+result, err = tool.Execute(ctx, params)
+```
 
 ---
 
-#### 4. List Tool ✅
+#### List Tool
 
-**Purpose**: List directory contents with filtering
+List directory contents with filtering and metadata.
 
 **Features**:
-- Pattern-based filtering (glob patterns)
+- Pattern-based filtering using glob syntax
 - Recursive directory listing
-- File metadata (size, permissions, modification time)
-- Include/exclude by file extensions
-- Sorted output by name
+- File metadata including size, permissions, and modification time
+- Include/exclude filtering by file extensions
+- Results sorted by name
 
 **Parameters**:
 ```json
 {
-  "path": "string (required)",
-  "pattern": "string (glob pattern, optional)",
-  "recursive": "boolean (default: false)",
-  "include": "array of strings (file extensions)",
-  "exclude": "array of strings (file extensions)"
+  "path": "string (required) - Directory path to list",
+  "pattern": "string (optional) - Glob pattern to filter files (e.g., '*.txt')",
+  "recursive": "boolean (optional) - List directories recursively (default: false)",
+  "include": "array (optional) - File extensions to include (e.g., ['.txt', '.md'])",
+  "exclude": "array (optional) - File extensions to exclude (e.g., ['.tmp', '.log'])"
 }
 ```
 
 **Usage Example**:
 ```go
 tool := tools.NewListTool()
-params := json.RawMessage(`{
-    "path": "/path/to/directory",
-    "recursive": true,
-    "include": [".txt", ".md"],
-    "exclude": [".tmp", ".log"]
-}`)
+
+// List all files in directory
+params := json.RawMessage(`{"path": "/path/to/directory"}`)
 result, err := tool.Execute(ctx, params)
 
 listResult := result.(*tools.ListResult)
-fmt.Printf("Found %d files\n", listResult.Count)
+fmt.Printf("Found %d files in %s\n", listResult.Count, listResult.Path)
 for _, file := range listResult.Files {
-    fmt.Printf("%s (%d bytes, %s)\n",
-        file.Name, file.Size, file.Permissions)
+    fmt.Printf("%s (%d bytes, %s, modified: %d)\n",
+        file.Name, file.Size, file.Permissions, file.ModifiedTime)
 }
-```
 
-**Test Coverage**: 14 tests, all passing
+// List with pattern filter
+params = json.RawMessage(`{
+    "path": "/path/to/directory",
+    "pattern": "*.go"
+}`)
+
+// Recursive listing with extension filters
+params = json.RawMessage(`{
+    "path": "/path/to/project",
+    "recursive": true,
+    "include": [".go", ".mod", ".sum"],
+    "exclude": [".tmp", ".bak"]
+}`)
+```
 
 ---
 
-#### 5. Glob Tool ✅
+#### Glob Tool
 
-**Purpose**: Advanced pattern matching for finding files
+Advanced file pattern matching with support for recursive patterns.
 
 **Features**:
-- Support for `**` recursive patterns (e.g., `**/*.go`)
+- Recursive pattern matching with `**` (e.g., `**/*.go`)
 - Multiple pattern support
-- Sorting by name, size, or modification time
-- Ascending/descending sort order
+- Sort by name, size, or modification time
+- Ascending or descending sort order
 - Optional detailed file metadata
-- Symlink following (configurable)
+- Configurable symlink following
 
 **Parameters**:
 ```json
 {
-  "patterns": "array of strings (required, e.g., ['**/*.go', '*.txt'])",
-  "path": "string (base path, default: current directory)",
-  "case_sensitive": "boolean (default: false)",
-  "follow_symlinks": "boolean (default: false)",
-  "sort_by": "name|size|modtime (optional)",
-  "sort_order": "asc|desc (default: asc)",
-  "include_info": "boolean (include metadata, default: false)"
+  "patterns": "array (required) - Glob patterns to match (e.g., ['**/*.go', '*.txt'])",
+  "path": "string (optional) - Base path to search from (default: current directory)",
+  "case_sensitive": "boolean (optional) - Case-sensitive matching (default: false)",
+  "follow_symlinks": "boolean (optional) - Follow symbolic links (default: false)",
+  "sort_by": "string (optional) - Sort by 'name', 'size', or 'modtime'",
+  "sort_order": "string (optional) - 'asc' or 'desc' (default: asc)",
+  "include_info": "boolean (optional) - Include detailed metadata (default: false)"
 }
 ```
 
 **Usage Example**:
 ```go
 tool := tools.NewGlobTool()
+
+// Find all Go files recursively
 params := json.RawMessage(`{
-    "patterns": ["**/*.go", "**/*_test.go"],
-    "path": "/path/to/project",
-    "sort_by": "modtime",
-    "sort_order": "desc",
-    "include_info": true
+    "patterns": ["**/*.go"],
+    "path": "/path/to/project"
 }`)
 result, err := tool.Execute(ctx, params)
 
 globResult := result.(*tools.GlobResult)
 fmt.Printf("Found %d matches\n", globResult.Count)
 for _, match := range globResult.Matches {
+    fmt.Println(match.Path)
+}
+
+// Multiple patterns with sorting and metadata
+params = json.RawMessage(`{
+    "patterns": ["**/*.go", "**/*_test.go"],
+    "path": "/path/to/project",
+    "sort_by": "modtime",
+    "sort_order": "desc",
+    "include_info": true
+}`)
+result, err = tool.Execute(ctx, params)
+
+globResult = result.(*tools.GlobResult)
+for _, match := range globResult.Matches {
     fmt.Printf("%s (%d bytes, modified: %d)\n",
         match.Path, match.Size, match.ModifiedTime)
 }
-```
 
-**Test Coverage**: 12 tests, all passing
+// Case-sensitive matching
+params = json.RawMessage(`{
+    "patterns": ["**/*.TXT"],
+    "case_sensitive": true
+}`)
+```
 
 ---
 
 ### System Tools
 
-#### 6. Shell Tool ✅
+#### Shell Tool
 
-**Purpose**: Execute shell commands with security measures
+Execute shell commands with security measures and timeout protection.
 
 **Features**:
-- Command execution with configurable timeout (default: 30s, max: 300s)
+- Command execution with configurable timeout
 - Working directory specification
 - Environment variable support
 - Shell selection (bash, sh, powershell)
-- Dangerous command blocking (e.g., `rm -rf /`, fork bombs)
-- Exit code capture
-- Separate stdout/stderr capture
+- Dangerous command blocking
+- Exit code and output capture
+- Separate stdout and stderr
 - Execution duration tracking
 
 **Parameters**:
 ```json
 {
-  "command": "string (required)",
-  "args": "array of strings (optional)",
-  "working_dir": "string (optional)",
-  "environment": "object (key-value pairs, optional)",
-  "timeout": "integer seconds (default: 30, max: 300)",
-  "shell": "bash|sh|powershell (optional)"
+  "command": "string (required) - Command to execute",
+  "args": "array (optional) - Command arguments",
+  "working_dir": "string (optional) - Working directory for execution",
+  "environment": "object (optional) - Environment variables as key-value pairs",
+  "timeout": "integer (optional) - Timeout in seconds (default: 30, max: 300)",
+  "shell": "string (optional) - Shell to use: 'bash', 'sh', or 'powershell'"
 }
 ```
 
 **Usage Example**:
 ```go
 tool := tools.NewShellTool()
-params := json.RawMessage(`{
-    "command": "ls -la",
-    "working_dir": "/tmp",
-    "timeout": 10,
-    "environment": {
-        "MY_VAR": "value"
-    }
-}`)
+
+// Simple command execution
+params := json.RawMessage(`{"command": "ls -la"}`)
 result, err := tool.Execute(ctx, params)
 
 shellResult := result.(*tools.ShellResult)
 fmt.Printf("Exit Code: %d\n", shellResult.ExitCode)
-fmt.Printf("Duration: %dms\n", shellResult.Duration)
-fmt.Println("Output:", shellResult.Stdout)
+fmt.Printf("Output:\n%s\n", shellResult.Stdout)
+if shellResult.Stderr != "" {
+    fmt.Printf("Errors:\n%s\n", shellResult.Stderr)
+}
+
+// Command with arguments and timeout
+params = json.RawMessage(`{
+    "command": "find",
+    "args": ["/path/to/search", "-name", "*.go"],
+    "timeout": 60
+}`)
+
+// With working directory and environment
+params = json.RawMessage(`{
+    "command": "make build",
+    "working_dir": "/path/to/project",
+    "environment": {
+        "GOARCH": "amd64",
+        "GOOS": "linux"
+    },
+    "timeout": 120
+}`)
+
+// Using specific shell for complex commands
+params = json.RawMessage(`{
+    "command": "for f in *.txt; do echo $f; done",
+    "shell": "bash"
+}`)
+
+// Check for timeout
 if shellResult.Timeout {
-    fmt.Println("Command timed out!")
+    fmt.Println("Command timed out")
 }
 ```
 
-**Security Features**:
-- Blocks dangerous patterns: `rm -rf /`, fork bombs, `mkfs`, `dd if=/dev/zero`
-- Maximum timeout enforcement
-- Proper process cleanup
-
-**Test Coverage**: 15 tests (11 on Unix systems), all passing
+**Security Notes**:
+- Commands are validated before execution
+- Dangerous patterns are blocked: `rm -rf /`, fork bombs, `mkfs`, `dd if=/dev/zero`
+- Maximum timeout is enforced at 300 seconds
+- Processes are properly cleaned up
 
 ---
 
 ### Task Management Tools
 
-#### 7. TaskList Tool ✅
+#### TaskList Tool
 
-**Purpose**: Create and manage hierarchical task lists
+Create and manage hierarchical task lists with priority and status tracking.
 
 **Features**:
 - Task list creation and management
-- Hierarchical tasks (parent/child relationships)
+- Hierarchical tasks with parent/child relationships
 - Priority levels: high, medium, low
 - Status tracking: pending, in_progress, completed, cancelled
-- CRUD operations: create, read (get/list), update, delete
-- Automatic timestamps (created, updated, completed)
-- UUID-based task and list IDs
+- CRUD operations: create, update, list, delete, get
+- Automatic timestamps for created, updated, and completed
+- UUID-based IDs for lists and tasks
 
 **Parameters**:
 ```json
 {
-  "action": "create|update|list|delete|get (required)",
-  "list_id": "string (optional for create list)",
-  "task_id": "string (required for update/delete/get task)",
-  "title": "string (optional)",
-  "description": "string (optional)",
-  "priority": "high|medium|low (optional, default: medium)",
-  "status": "pending|in_progress|completed|cancelled (optional)",
-  "parent_id": "string (optional, for hierarchical tasks)"
+  "action": "string (required) - 'create', 'update', 'list', 'delete', or 'get'",
+  "list_id": "string (optional) - Task list ID",
+  "task_id": "string (optional) - Task ID",
+  "title": "string (optional) - Title for task or list",
+  "description": "string (optional) - Task description",
+  "priority": "string (optional) - 'high', 'medium', or 'low' (default: medium)",
+  "status": "string (optional) - 'pending', 'in_progress', 'completed', or 'cancelled'",
+  "parent_id": "string (optional) - Parent task ID for hierarchical tasks"
 }
 ```
 
@@ -379,21 +459,30 @@ result, err := tool.Execute(ctx, params)
 
 taskResult := result.(*tools.TaskListResult)
 listID := taskResult.ListID
+fmt.Printf("Created list: %s\n", listID)
 ```
 
-**Create a task**:
+**Create tasks**:
 ```go
+// High priority task
 params := json.RawMessage(fmt.Sprintf(`{
     "action": "create",
     "list_id": "%s",
-    "title": "Implement feature X",
-    "description": "Add new functionality",
+    "title": "Implement authentication",
+    "description": "Add OAuth2 support",
     "priority": "high"
 }`, listID))
 result, err := tool.Execute(ctx, params)
 
 taskResult := result.(*tools.TaskListResult)
 taskID := taskResult.TaskID
+
+// Task with default priority (medium)
+params = json.RawMessage(fmt.Sprintf(`{
+    "action": "create",
+    "list_id": "%s",
+    "title": "Write documentation"
+}`, listID))
 ```
 
 **Update task status**:
@@ -402,99 +491,146 @@ params := json.RawMessage(fmt.Sprintf(`{
     "action": "update",
     "list_id": "%s",
     "task_id": "%s",
-    "status": "completed"
+    "status": "in_progress"
 }`, listID, taskID))
 result, err := tool.Execute(ctx, params)
+
+// Mark as completed
+params = json.RawMessage(fmt.Sprintf(`{
+    "action": "update",
+    "list_id": "%s",
+    "task_id": "%s",
+    "status": "completed"
+}`, listID, taskID))
 ```
 
-**List all tasks**:
+**List tasks**:
 ```go
-params := json.RawMessage(fmt.Sprintf(`{
-    "action": "list",
-    "list_id": "%s"
-}`, listID))
+// List all task lists
+params := json.RawMessage(`{"action": "list"}`)
 result, err := tool.Execute(ctx, params)
 
 taskResult := result.(*tools.TaskListResult)
+for _, list := range taskResult.Lists {
+    fmt.Printf("%s: %s (%d tasks)\n", list.ID, list.Title, list.TaskCount)
+}
+
+// List tasks in a specific list
+params = json.RawMessage(fmt.Sprintf(`{
+    "action": "list",
+    "list_id": "%s"
+}`, listID))
+result, err = tool.Execute(ctx, params)
+
+taskResult = result.(*tools.TaskListResult)
 for _, task := range taskResult.Tasks {
-    fmt.Printf("%s - %s [%s]\n", task.Title, task.Status, task.Priority)
+    fmt.Printf("[%s] %s - %s (%s)\n",
+        task.Priority, task.Title, task.Status, task.Description)
 }
 ```
 
-**Create hierarchical tasks**:
+**Get specific task**:
+```go
+params := json.RawMessage(fmt.Sprintf(`{
+    "action": "get",
+    "list_id": "%s",
+    "task_id": "%s"
+}`, listID, taskID))
+result, err := tool.Execute(ctx, params)
+
+taskResult := result.(*tools.TaskListResult)
+task := taskResult.Task
+fmt.Printf("Task: %s\nStatus: %s\nPriority: %s\n",
+    task.Title, task.Status, task.Priority)
+```
+
+**Hierarchical tasks**:
 ```go
 // Create parent task
 params := json.RawMessage(fmt.Sprintf(`{
     "action": "create",
     "list_id": "%s",
-    "title": "Parent Task"
+    "title": "Feature: User Management"
 }`, listID))
 parentResult, _ := tool.Execute(ctx, params)
 parentID := parentResult.(*tools.TaskListResult).TaskID
 
-// Create child task
+// Create subtasks
 params = json.RawMessage(fmt.Sprintf(`{
     "action": "create",
     "list_id": "%s",
-    "title": "Child Task",
+    "title": "Design database schema",
+    "parent_id": "%s",
+    "priority": "high"
+}`, listID, parentID))
+
+params = json.RawMessage(fmt.Sprintf(`{
+    "action": "create",
+    "list_id": "%s",
+    "title": "Implement API endpoints",
     "parent_id": "%s"
 }`, listID, parentID))
-childResult, _ := tool.Execute(ctx, params)
 ```
 
-**Test Coverage**: 12 tests, all passing
+**Delete tasks and lists**:
+```go
+// Delete a task
+params := json.RawMessage(fmt.Sprintf(`{
+    "action": "delete",
+    "list_id": "%s",
+    "task_id": "%s"
+}`, listID, taskID))
+
+// Delete entire list
+params = json.RawMessage(fmt.Sprintf(`{
+    "action": "delete",
+    "list_id": "%s"
+}`, listID))
+```
 
 ---
 
 ## Security Features
 
 ### Input Validation
-- All tools validate parameters before execution
-- Type checking and range validation
-- Path sanitization to prevent directory traversal
+All tools perform strict parameter validation before execution:
+- Type checking and format validation
+- Range validation for numeric parameters
+- Path sanitization to prevent directory traversal attacks
+- Required parameter enforcement
 
 ### Shell Command Safety
-- Dangerous command pattern blocking
-- Timeout enforcement (max 300 seconds)
-- No privilege escalation
+The Shell tool includes multiple security layers:
+- **Dangerous pattern blocking**: Prevents execution of commands like `rm -rf /`, fork bombs, `mkfs`, and `dd if=/dev/zero`
+- **Timeout enforcement**: Maximum 300-second timeout to prevent runaway processes
+- **Process cleanup**: Ensures proper cleanup of child processes
+- **No privilege escalation**: Runs commands with current user permissions
 
 ### File Operations Safety
-- Backup support before overwrites
-- Dry-run mode for destructive operations
-- Atomic writes using temporary files
+File system tools implement safety features:
+- **Backup support**: Write tool can backup files before overwriting
+- **Dry-run mode**: Delete tool supports preview mode
+- **Atomic writes**: Write tool uses temporary files and atomic rename operations
+- **Directory creation**: Automatic parent directory creation with appropriate permissions
 
 ### Error Handling
-- Comprehensive error messages
-- Graceful failure modes
-- Proper resource cleanup
-
-## Performance Considerations
-
-### Optimizations
-- Streaming for large file operations (Read/Write)
-- Concurrent-safe registry with RWMutex
-- Efficient pattern matching with filepath.Walk
-- Minimal memory footprint for file operations
-
-### Resource Limits
-- Shell timeout: 30s default, 300s maximum
-- File operations respect system limits
-- No artificial size restrictions (respects available memory)
+- Comprehensive error messages with context
+- Graceful failure modes with proper cleanup
+- Resource cleanup on error conditions
+- Context-aware error reporting
 
 ## Best Practices
 
-### Tool Usage
-1. **Always validate parameters** before execution
-2. **Use dry-run mode** for destructive operations (Delete)
-3. **Set appropriate timeouts** for shell commands
-4. **Check error returns** from Execute()
-5. **Use context cancellation** for long-running operations
+### Parameter Validation
 
-### Error Handling
+Always validate parameters before execution:
+
 ```go
 tool := tools.NewReadTool()
+
+// Validate before executing
 if err := tool.Validate(params); err != nil {
-    log.Printf("Validation failed: %v", err)
+    log.Printf("Invalid parameters: %v", err)
     return
 }
 
@@ -505,168 +641,280 @@ if err != nil {
 }
 ```
 
-### Registry Pattern
+### Use Dry-Run for Destructive Operations
+
+Test destructive operations before executing:
+
 ```go
-// Initialize once, use many times
-registry := tools.NewToolRegistry()
-registry.Register(tools.NewReadTool())
-registry.Register(tools.NewWriteTool())
-registry.Register(tools.NewDeleteTool())
-registry.Register(tools.NewListTool())
-registry.Register(tools.NewGlobTool())
-registry.Register(tools.NewShellTool())
-registry.Register(tools.NewTaskListTool())
+deleteTool := tools.NewDeleteTool()
+
+// First, preview what would be deleted
+dryRunParams := json.RawMessage(`{
+    "path": "/path/to/delete",
+    "recursive": true,
+    "dry_run": true
+}`)
+result, _ := deleteTool.Execute(ctx, dryRunParams)
+
+deleteResult := result.(*tools.DeleteResult)
+fmt.Printf("Will delete %d items\n", deleteResult.FilesRemoved)
+
+// After user confirmation, perform actual deletion
+actualParams := json.RawMessage(`{
+    "path": "/path/to/delete",
+    "recursive": true
+}`)
+result, err := deleteTool.Execute(ctx, actualParams)
+```
+
+### Set Appropriate Timeouts
+
+Configure timeouts based on expected execution time:
+
+```go
+shellTool := tools.NewShellTool()
+
+// Short timeout for quick commands
+quickParams := json.RawMessage(`{
+    "command": "ls -la",
+    "timeout": 5
+}`)
+
+// Longer timeout for builds
+buildParams := json.RawMessage(`{
+    "command": "make build",
+    "timeout": 180
+}`)
+```
+
+### Use Context Cancellation
+
+Support cancellation for long-running operations:
+
+```go
+ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+defer cancel()
+
+result, err := tool.Execute(ctx, params)
+if err != nil {
+    if ctx.Err() == context.DeadlineExceeded {
+        log.Println("Operation timed out")
+    } else {
+        log.Printf("Operation failed: %v", err)
+    }
+}
+```
+
+### Registry Pattern
+
+Initialize the registry once and reuse:
+
+```go
+// Application initialization
+var toolRegistry *tools.ToolRegistry
+
+func init() {
+    toolRegistry = tools.NewToolRegistry()
+    toolRegistry.Register(tools.NewReadTool())
+    toolRegistry.Register(tools.NewWriteTool())
+    toolRegistry.Register(tools.NewDeleteTool())
+    toolRegistry.Register(tools.NewListTool())
+    toolRegistry.Register(tools.NewGlobTool())
+    toolRegistry.Register(tools.NewShellTool())
+    toolRegistry.Register(tools.NewTaskListTool())
+}
 
 // Use throughout application
-tool, _ := registry.Get(toolName)
-result, err := tool.Execute(ctx, params)
+func executeTool(name string, params json.RawMessage) (interface{}, error) {
+    tool, err := toolRegistry.Get(name)
+    if err != nil {
+        return nil, fmt.Errorf("tool not found: %w", err)
+    }
+
+    if err := tool.Validate(params); err != nil {
+        return nil, fmt.Errorf("validation failed: %w", err)
+    }
+
+    return tool.Execute(context.Background(), params)
+}
 ```
 
-## Testing
+### Error Handling Pattern
 
-All tools include comprehensive unit tests:
-
-| Tool | Tests | Status |
-|------|-------|--------|
-| Registry | 6 | ✅ Passing |
-| Read | 15 | ✅ Passing |
-| Write | 12 | ✅ Passing |
-| Delete | 10 | ✅ Passing |
-| List | 14 | ✅ Passing |
-| Glob | 12 | ✅ Passing |
-| Shell | 15 | ✅ Passing |
-| TaskList | 12 | ✅ Passing |
-| **Total** | **148** | **✅ All Passing** |
-
-**Overall Coverage**: 83.1% of statements
-
-### Running Tests
-```bash
-# Run all tests
-go test ./tools/...
-
-# Run with coverage
-go test ./tools/... -cover
-
-# Run with verbose output
-go test ./tools/... -v
-
-# Run specific tool tests
-go test ./tools/... -run TestReadTool
-```
-
-## Custom Tool Creation
-
-Create custom tools by implementing the `Tool` interface:
+Implement comprehensive error handling:
 
 ```go
-type CustomTool struct {
-    // Your custom fields
+func safeToolExecution(tool tools.Tool, params json.RawMessage) (interface{}, error) {
+    // Validate parameters
+    if err := tool.Validate(params); err != nil {
+        return nil, fmt.Errorf("parameter validation failed: %w", err)
+    }
+
+    // Create context with timeout
+    ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+    defer cancel()
+
+    // Execute tool
+    result, err := tool.Execute(ctx, params)
+    if err != nil {
+        // Check for context errors
+        if ctx.Err() == context.DeadlineExceeded {
+            return nil, fmt.Errorf("operation timed out")
+        }
+        if ctx.Err() == context.Canceled {
+            return nil, fmt.Errorf("operation canceled")
+        }
+        return nil, fmt.Errorf("execution failed: %w", err)
+    }
+
+    return result, nil
+}
+```
+
+## Creating Custom Tools
+
+Implement the `Tool` interface to create custom tools:
+
+```go
+package mytools
+
+import (
+    "context"
+    "encoding/json"
+    "fmt"
+
+    "github.com/geoffjay/agar/tools"
+)
+
+// DatabaseQueryTool executes SQL queries
+type DatabaseQueryTool struct {
+    connectionString string
 }
 
-func NewCustomTool() *CustomTool {
-    return &CustomTool{}
-}
-
-func (t *CustomTool) Name() string {
-    return "custom"
-}
-
-func (t *CustomTool) Description() string {
-    return "Custom tool description"
-}
-
-func (t *CustomTool) Schema() map[string]interface{} {
-    return map[string]interface{}{
-        "type": "object",
-        "properties": map[string]interface{}{
-            "param": map[string]interface{}{
-                "type": "string",
-                "description": "Parameter description",
-            },
-        },
-        "required": []string{"param"},
+func NewDatabaseQueryTool(connStr string) *DatabaseQueryTool {
+    return &DatabaseQueryTool{
+        connectionString: connStr,
     }
 }
 
-func (t *CustomTool) Validate(params json.RawMessage) error {
-    // Validation logic
+func (t *DatabaseQueryTool) Name() string {
+    return "database_query"
+}
+
+func (t *DatabaseQueryTool) Description() string {
+    return "Execute SQL queries against a database and return results"
+}
+
+func (t *DatabaseQueryTool) Schema() map[string]interface{} {
+    return map[string]interface{}{
+        "type": "object",
+        "properties": map[string]interface{}{
+            "query": map[string]interface{}{
+                "type":        "string",
+                "description": "SQL query to execute",
+            },
+            "params": map[string]interface{}{
+                "type":        "array",
+                "description": "Query parameters for prepared statements",
+                "items": map[string]interface{}{
+                    "type": "string",
+                },
+            },
+            "timeout": map[string]interface{}{
+                "type":        "integer",
+                "description": "Query timeout in seconds (default: 30)",
+                "minimum":     1,
+                "maximum":     300,
+            },
+        },
+        "required": []string{"query"},
+    }
+}
+
+func (t *DatabaseQueryTool) Validate(params json.RawMessage) error {
+    var p struct {
+        Query   string   `json:"query"`
+        Params  []string `json:"params"`
+        Timeout int      `json:"timeout"`
+    }
+
+    if err := json.Unmarshal(params, &p); err != nil {
+        return fmt.Errorf("invalid parameters: %w", err)
+    }
+
+    if p.Query == "" {
+        return fmt.Errorf("query is required")
+    }
+
+    if p.Timeout < 0 || p.Timeout > 300 {
+        return fmt.Errorf("timeout must be between 1 and 300 seconds")
+    }
+
     return nil
 }
 
-func (t *CustomTool) Execute(ctx context.Context, params json.RawMessage) (interface{}, error) {
-    // Implementation
+func (t *DatabaseQueryTool) Execute(ctx context.Context, params json.RawMessage) (interface{}, error) {
+    var p struct {
+        Query   string   `json:"query"`
+        Params  []string `json:"params"`
+        Timeout int      `json:"timeout"`
+    }
+
+    if err := json.Unmarshal(params, &p); err != nil {
+        return nil, fmt.Errorf("invalid parameters: %w", err)
+    }
+
+    // Set default timeout
+    if p.Timeout == 0 {
+        p.Timeout = 30
+    }
+
+    // Your database query implementation here
+    // ...
+
     return result, nil
 }
 
-// Register your custom tool
-registry.Register(NewCustomTool())
+// Register and use the custom tool
+func main() {
+    registry := tools.NewToolRegistry()
+
+    // Register custom tool
+    dbTool := NewDatabaseQueryTool("postgresql://localhost/mydb")
+    registry.Register(dbTool)
+
+    // Use the tool
+    params := json.RawMessage(`{
+        "query": "SELECT * FROM users WHERE age > $1",
+        "params": ["25"],
+        "timeout": 60
+    }`)
+
+    tool, _ := registry.Get("database_query")
+    result, err := tool.Execute(context.Background(), params)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    fmt.Printf("Query results: %+v\n", result)
+}
 ```
-
-## Future Enhancements
-
-### Phase 2: Web & Search Tools (Not Yet Implemented)
-- **Fetch Tool**: HTTP/HTTPS requests with authentication
-- **Download Tool**: File downloads with resume support
-- **Search Tool**: Content-based file searching with regex
-- **Grep Tool**: Advanced pattern matching
-
-### Phase 3: Data Processing Tools (Not Yet Implemented)
-- **JSON Tool**: Parse, validate, and query JSON data
-- **CSV Tool**: CSV parsing and manipulation
-- **Template Tool**: Go template rendering
-
-### Phase 4: Advanced Features (Not Yet Implemented)
-- **Environment Tool**: System environment management
-- **TaskExec Tool**: Task execution with monitoring
-- **Plugin System**: External tool plugins
-- **Tool Chaining**: Workflow pipelines
-- **Metrics**: Usage analytics and performance monitoring
 
 ## Dependencies
 
+The tools package requires:
+
 ```go
 require (
-    github.com/charmbracelet/bubbletea v0.25.0  // For TUI applications
-    github.com/charmbracelet/lipgloss v0.9.1     // For styling
-    github.com/google/uuid v1.6.0                // For TaskList IDs
+    github.com/google/uuid v1.6.0  // For TaskList UUID generation
 )
 ```
 
-## Package Structure
+The TUI framework (for UI integration) requires:
 
+```go
+require (
+    github.com/charmbracelet/bubbletea v0.25.0
+    github.com/charmbracelet/lipgloss v0.9.1
+)
 ```
-tools/
-├── tool.go              # Core Tool interface and types
-├── registry.go          # ToolRegistry implementation
-├── registry_test.go     # Registry tests (6 tests)
-├── read.go             # Read tool implementation
-├── read_test.go        # Read tests (15 tests)
-├── write.go            # Write tool implementation
-├── write_test.go       # Write tests (12 tests)
-├── delete.go           # Delete tool implementation
-├── delete_test.go      # Delete tests (10 tests)
-├── list.go             # List tool implementation
-├── list_test.go        # List tests (14 tests)
-├── glob.go             # Glob tool implementation
-├── glob_test.go        # Glob tests (12 tests)
-├── shell.go            # Shell tool implementation
-├── shell_test.go       # Shell tests (15 tests)
-├── tasklist.go         # TaskList tool implementation
-└── tasklist_test.go    # TaskList tests (12 tests)
-```
-
-## Contributing
-
-When adding new tools:
-
-1. Implement the `Tool` interface
-2. Add comprehensive unit tests (aim for >80% coverage)
-3. Update this documentation with usage examples
-4. Add the tool to the registry in examples
-5. Consider security implications
-6. Follow existing naming conventions
-
-## License
-
-Part of the Agar library. See main project LICENSE for details.
