@@ -107,8 +107,10 @@ func (a *Application) View() string {
 	// Update panel size
 	a.panel.SetSize(a.width, contentHeight)
 
-	// Render the panel
-	b.WriteString(a.panel.Render())
+	// Render the panel (trim any leading newlines from margin)
+	panelOutput := a.panel.Render()
+	panelOutput = strings.TrimLeft(panelOutput, "\n")
+	b.WriteString(panelOutput)
 
 	// Add newline before footer
 	b.WriteString("\n")

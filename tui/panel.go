@@ -16,6 +16,17 @@ const (
 	RoundedBorder
 )
 
+// BorderFlags represents which sides of the panel should have borders
+type BorderFlags uint8
+
+const (
+	BorderTop    BorderFlags = 1 << iota // 0001
+	BorderBottom                          // 0010
+	BorderLeft                            // 0100
+	BorderRight                           // 1000
+	BorderAll    = BorderTop | BorderBottom | BorderLeft | BorderRight
+)
+
 // Panel represents a content area with configurable margin, padding, and borders
 type Panel struct {
 	content      string
@@ -24,6 +35,7 @@ type Panel struct {
 	margin       int
 	padding      int
 	borderStyle  BorderStyle
+	borderFlags  BorderFlags
 	style        lipgloss.Style
 	borderColor  lipgloss.Color
 	bgColor      lipgloss.Color
@@ -34,7 +46,13 @@ var PanelStyle = lipgloss.NewStyle().
 	Foreground(lipgloss.Color("252"))
 
 // NewPanel creates a new panel with the specified configuration
+// By default, all borders are enabled if borderStyle is not NoBorder
 func NewPanel(margin, padding int, borderStyle BorderStyle) *Panel {
+	borderFlags := BorderFlags(0)
+	if borderStyle != NoBorder {
+		borderFlags = BorderAll
+	}
+
 	return &Panel{
 		content:      "",
 		width:        80,
@@ -42,6 +60,23 @@ func NewPanel(margin, padding int, borderStyle BorderStyle) *Panel {
 		margin:       margin,
 		padding:      padding,
 		borderStyle:  borderStyle,
+		borderFlags:  borderFlags,
+		style:        PanelStyle,
+		borderColor:  lipgloss.Color("241"),
+		bgColor:      lipgloss.Color(""),
+	}
+}
+
+// NewPanelWithBorders creates a new panel with selective border configuration
+func NewPanelWithBorders(margin, padding int, borderStyle BorderStyle, borderFlags BorderFlags) *Panel {
+	return &Panel{
+		content:      "",
+		width:        80,
+		height:       24,
+		margin:       margin,
+		padding:      padding,
+		borderStyle:  borderStyle,
+		borderFlags:  borderFlags,
 		style:        PanelStyle,
 		borderColor:  lipgloss.Color("241"),
 		bgColor:      lipgloss.Color(""),
@@ -77,6 +112,15 @@ func (p *Panel) SetPadding(padding int) {
 // SetBorderStyle sets the border style
 func (p *Panel) SetBorderStyle(style BorderStyle) {
 	p.borderStyle = style
+	// Auto-enable all borders if switching from NoBorder to a border style
+	if style != NoBorder && p.borderFlags == 0 {
+		p.borderFlags = BorderAll
+	}
+}
+
+// SetBorderFlags sets which sides should have borders
+func (p *Panel) SetBorderFlags(flags BorderFlags) {
+	p.borderFlags = flags
 }
 
 // SetBorderColor sets the border color
@@ -108,7 +152,12 @@ func (p *Panel) GetHeight() int {
 func (p *Panel) GetContentWidth() int {
 	width := p.width - (p.margin * 2)
 	if p.borderStyle != NoBorder {
-		width -= 2 // Account for left and right borders
+		if p.borderFlags&BorderLeft != 0 {
+			width-- // Account for left border
+		}
+		if p.borderFlags&BorderRight != 0 {
+			width-- // Account for right border
+		}
 	}
 	width -= (p.padding * 2)
 	if width < 1 {
@@ -121,7 +170,12 @@ func (p *Panel) GetContentWidth() int {
 func (p *Panel) GetContentHeight() int {
 	height := p.height - (p.margin * 2)
 	if p.borderStyle != NoBorder {
-		height -= 2 // Account for top and bottom borders
+		if p.borderFlags&BorderTop != 0 {
+			height-- // Account for top border
+		}
+		if p.borderFlags&BorderBottom != 0 {
+			height-- // Account for bottom border
+		}
 	}
 	height -= (p.padding * 2)
 	if height < 1 {
@@ -146,6 +200,12 @@ func (p *Panel) Render() string {
 	// Split content into lines
 	contentLines := strings.Split(p.content, "\n")
 
+	// Check which borders are enabled
+	hasTop := p.borderStyle != NoBorder && p.borderFlags&BorderTop != 0
+	hasBottom := p.borderStyle != NoBorder && p.borderFlags&BorderBottom != 0
+	hasLeft := p.borderStyle != NoBorder && p.borderFlags&BorderLeft != 0
+	hasRight := p.borderStyle != NoBorder && p.borderFlags&BorderRight != 0
+
 	// Prepare the border characters
 	var topLeft, topRight, bottomLeft, bottomRight, horizontal, vertical string
 	switch p.borderStyle {
@@ -165,23 +225,46 @@ func (p *Panel) Render() string {
 	// Build the panel content
 	var panelLines []string
 
+	leftMargin := strings.Repeat(" ", p.margin)
+
 	// Top border
-	if p.borderStyle != NoBorder {
-		leftMargin := strings.Repeat(" ", p.margin)
-		borderLine := leftMargin + borderStyle.Render(topLeft+strings.Repeat(horizontal, contentWidth+p.padding*2)+topRight)
+	if hasTop {
+		var borderLine string
+		borderLine = leftMargin
+
+		// Top-left corner (only if both top and left are present)
+		if hasLeft {
+			borderLine += borderStyle.Render(topLeft)
+		}
+
+		// Top horizontal line
+		borderLine += borderStyle.Render(strings.Repeat(horizontal, contentWidth+p.padding*2))
+
+		// Top-right corner (only if both top and right are present)
+		if hasRight {
+			borderLine += borderStyle.Render(topRight)
+		}
+
 		panelLines = append(panelLines, borderLine)
 	}
 
 	// Top padding
-	if p.padding > 0 && p.borderStyle != NoBorder {
+	if p.padding > 0 {
 		for i := 0; i < p.padding; i++ {
-			leftMargin := strings.Repeat(" ", p.margin)
-			paddingLine := leftMargin + borderStyle.Render(vertical) + strings.Repeat(" ", contentWidth+p.padding*2) + borderStyle.Render(vertical)
+			var paddingLine string
+			paddingLine = leftMargin
+
+			if hasLeft {
+				paddingLine += borderStyle.Render(vertical)
+			}
+
+			paddingLine += strings.Repeat(" ", contentWidth+p.padding*2)
+
+			if hasRight {
+				paddingLine += borderStyle.Render(vertical)
+			}
+
 			panelLines = append(panelLines, paddingLine)
-		}
-	} else if p.padding > 0 {
-		for i := 0; i < p.padding; i++ {
-			panelLines = append(panelLines, "")
 		}
 	}
 
@@ -204,43 +287,66 @@ func (p *Panel) Render() string {
 		// Apply content style
 		styledLine := p.style.Render(line)
 
-		// Add borders and padding
-		leftMargin := strings.Repeat(" ", p.margin)
-		leftPadding := strings.Repeat(" ", p.padding)
-		rightPadding := strings.Repeat(" ", p.padding)
+		// Build the content line with borders and padding
+		var contentLine string
+		contentLine = leftMargin
 
-		if p.borderStyle != NoBorder {
-			panelLines = append(panelLines, leftMargin+borderStyle.Render(vertical)+leftPadding+styledLine+rightPadding+borderStyle.Render(vertical))
-		} else {
-			panelLines = append(panelLines, leftMargin+leftPadding+styledLine+rightPadding)
+		if hasLeft {
+			contentLine += borderStyle.Render(vertical)
 		}
+
+		contentLine += strings.Repeat(" ", p.padding) + styledLine + strings.Repeat(" ", p.padding)
+
+		if hasRight {
+			contentLine += borderStyle.Render(vertical)
+		}
+
+		panelLines = append(panelLines, contentLine)
 	}
 
 	// Bottom padding
-	if p.padding > 0 && p.borderStyle != NoBorder {
+	if p.padding > 0 {
 		for i := 0; i < p.padding; i++ {
-			leftMargin := strings.Repeat(" ", p.margin)
-			paddingLine := leftMargin + borderStyle.Render(vertical) + strings.Repeat(" ", contentWidth+p.padding*2) + borderStyle.Render(vertical)
+			var paddingLine string
+			paddingLine = leftMargin
+
+			if hasLeft {
+				paddingLine += borderStyle.Render(vertical)
+			}
+
+			paddingLine += strings.Repeat(" ", contentWidth+p.padding*2)
+
+			if hasRight {
+				paddingLine += borderStyle.Render(vertical)
+			}
+
 			panelLines = append(panelLines, paddingLine)
-		}
-	} else if p.padding > 0 {
-		for i := 0; i < p.padding; i++ {
-			panelLines = append(panelLines, "")
 		}
 	}
 
 	// Bottom border
-	if p.borderStyle != NoBorder {
-		leftMargin := strings.Repeat(" ", p.margin)
-		borderLine := leftMargin + borderStyle.Render(bottomLeft+strings.Repeat(horizontal, contentWidth+p.padding*2)+bottomRight)
+	if hasBottom {
+		var borderLine string
+		borderLine = leftMargin
+
+		// Bottom-left corner (only if both bottom and left are present)
+		if hasLeft {
+			borderLine += borderStyle.Render(bottomLeft)
+		}
+
+		// Bottom horizontal line
+		borderLine += borderStyle.Render(strings.Repeat(horizontal, contentWidth+p.padding*2))
+
+		// Bottom-right corner (only if both bottom and right are present)
+		if hasRight {
+			borderLine += borderStyle.Render(bottomRight)
+		}
+
 		panelLines = append(panelLines, borderLine)
 	}
 
 	// Join all lines
 	b.WriteString(strings.Join(panelLines, "\n"))
-
-	// Add bottom margin (if needed)
-	// Note: bottom margin is typically not added as it's at the end
 
 	return b.String()
 }
