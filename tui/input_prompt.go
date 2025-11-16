@@ -1,9 +1,11 @@
 package tui
 
 import (
+	"fmt"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/geoffjay/agar/commands"
 )
 
 // PromptMode represents the input mode for the prompt
@@ -21,31 +23,39 @@ type PromptSubmitMsg struct {
 
 // PromptModel represents a prompt input component with history
 type PromptModel struct {
-	prefix         string
-	placeholder    string
-	mode           PromptMode
-	input          string
-	history        []string
-	historyIndex   int
-	historyEnabled bool
-	width          int
-	onSubmit       func(string) // Optional callback
-	done           bool
+	prefix            string
+	placeholder       string
+	mode              PromptMode
+	input             string
+	history           []string
+	historyIndex      int
+	historyEnabled    bool
+	width             int
+	onSubmit          func(string) // Optional callback
+	done              bool
+	commandManager    *commands.Manager
+	completions       []string
+	completionIndex   int
+	showCompletions   bool
 }
 
 // NewPromptInput creates a new prompt input component
 func NewPromptInput(prefix, placeholder string, mode PromptMode) PromptModel {
 	return PromptModel{
-		prefix:         prefix,
-		placeholder:    placeholder,
-		mode:           mode,
-		input:          "",
-		history:        make([]string, 0),
-		historyIndex:   -1,
-		historyEnabled: true,
-		width:          80,
-		onSubmit:       nil,
-		done:           false,
+		prefix:            prefix,
+		placeholder:       placeholder,
+		mode:              mode,
+		input:             "",
+		history:           make([]string, 0),
+		historyIndex:      -1,
+		historyEnabled:    true,
+		width:             80,
+		onSubmit:          nil,
+		done:              false,
+		commandManager:    nil,
+		completions:       []string{},
+		completionIndex:   0,
+		showCompletions:   false,
 	}
 }
 
@@ -58,6 +68,12 @@ func (m PromptModel) WithHistory(enabled bool) PromptModel {
 // WithOnSubmit sets an optional callback function
 func (m PromptModel) WithOnSubmit(callback func(string)) PromptModel {
 	m.onSubmit = callback
+	return m
+}
+
+// WithCommandManager sets the command manager for autocomplete support
+func (m PromptModel) WithCommandManager(manager *commands.Manager) PromptModel {
+	m.commandManager = manager
 	return m
 }
 
@@ -97,8 +113,13 @@ func (m PromptModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case "up":
-			// Navigate history backwards (older)
-			if m.historyEnabled && len(m.history) > 0 {
+			// If completions are shown, navigate through them
+			if m.showCompletions && len(m.completions) > 0 {
+				if m.completionIndex > 0 {
+					m.completionIndex--
+				}
+			} else if m.historyEnabled && len(m.history) > 0 {
+				// Navigate history backwards (older)
 				if m.historyIndex == -1 {
 					// First time pressing up, start at end of history
 					m.historyIndex = len(m.history) - 1
@@ -107,11 +128,18 @@ func (m PromptModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.historyIndex--
 					m.input = m.history[m.historyIndex]
 				}
+				// Update completions after history change
+				m.updateCompletions()
 			}
 
 		case "down":
-			// Navigate history forwards (newer)
-			if m.historyEnabled && m.historyIndex != -1 {
+			// If completions are shown, navigate through them
+			if m.showCompletions && len(m.completions) > 0 {
+				if m.completionIndex < len(m.completions)-1 {
+					m.completionIndex++
+				}
+			} else if m.historyEnabled && m.historyIndex != -1 {
+				// Navigate history forwards (newer)
 				if m.historyIndex < len(m.history)-1 {
 					m.historyIndex++
 					m.input = m.history[m.historyIndex]
@@ -120,6 +148,8 @@ func (m PromptModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.historyIndex = -1
 					m.input = ""
 				}
+				// Update completions after history change
+				m.updateCompletions()
 			}
 
 		case "backspace":
@@ -134,17 +164,28 @@ func (m PromptModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+w":
 			// Delete word
 			m.input = deleteLastWord(m.input)
+			m.updateCompletions()
+
+		case "tab":
+			// Autocomplete - accept current completion
+			if m.showCompletions && len(m.completions) > 0 {
+				completion := m.completions[m.completionIndex]
+				// Replace the partial command with the completion
+				m.input = "/" + completion
+				m.showCompletions = false
+				m.completions = []string{}
+			}
 
 		default:
 			// Add character to input
-			if len(msg.String()) == 1 || msg.Type == tea.KeySpace || msg.Type == tea.KeyTab {
+			if len(msg.String()) == 1 || msg.Type == tea.KeySpace {
 				if msg.Type == tea.KeySpace {
 					m.input += " "
-				} else if msg.Type == tea.KeyTab {
-					m.input += "\t"
 				} else {
 					m.input += msg.String()
 				}
+				// Update completions when input changes
+				m.updateCompletions()
 			}
 		}
 	}
@@ -216,7 +257,71 @@ func (m PromptModel) View() string {
 
 	b.WriteString(HelpStyle.Render(" • Ctrl+C to quit"))
 
+	// Show command completions if available
+	if m.showCompletions && len(m.completions) > 0 {
+		b.WriteString("\n\n")
+		b.WriteString(HelpStyle.Render("Available commands:") + "\n")
+
+		// Show max 10 completions
+		maxShow := 10
+		if len(m.completions) < maxShow {
+			maxShow = len(m.completions)
+		}
+
+		for i := 0; i < maxShow; i++ {
+			cmd := m.completions[i]
+			if i == m.completionIndex {
+				// Highlight selected completion
+				b.WriteString(SuccessStyle.Render("  ▸ /" + cmd))
+			} else {
+				b.WriteString(HelpStyle.Render("    /" + cmd))
+			}
+
+			// Show command description if available
+			if m.commandManager != nil {
+				if cmdInfo, err := m.commandManager.GetCommand(cmd); err == nil {
+					b.WriteString(HelpStyle.Render(" - " + cmdInfo.Description()))
+				}
+			}
+			b.WriteString("\n")
+		}
+
+		if len(m.completions) > maxShow {
+			b.WriteString(HelpStyle.Render(fmt.Sprintf("  ... and %d more", len(m.completions)-maxShow)))
+			b.WriteString("\n")
+		}
+
+		b.WriteString(HelpStyle.Render("Tab to complete • ↑↓ to navigate"))
+	}
+
 	return b.String()
+}
+
+// updateCompletions updates the command completions based on current input
+func (m *PromptModel) updateCompletions() {
+	if m.commandManager == nil {
+		m.showCompletions = false
+		return
+	}
+
+	// Check if input starts with "/"
+	if !strings.HasPrefix(m.input, "/") {
+		m.showCompletions = false
+		m.completions = []string{}
+		return
+	}
+
+	// Get completions
+	completions := m.commandManager.GetCompletions(m.input)
+
+	if len(completions) > 0 {
+		m.showCompletions = true
+		m.completions = completions
+		m.completionIndex = 0
+	} else {
+		m.showCompletions = false
+		m.completions = []string{}
+	}
 }
 
 // GetInput returns the current input
