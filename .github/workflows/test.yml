@@ -103,7 +103,10 @@ jobs:
 
       - name: Build examples
         run: |
-          cd examples
-          go build -v -o footer_demo footer.go
-          go build -v -o application_demo application.go
-          go build -v -o border_demo border.go
+          for dir in examples/*/; do
+            if [ -f "$dir/main.go" ]; then
+              name=$(basename $dir)
+              echo "Building $name..."
+              go build -v -o "$dir$name" "./$dir"
+            fi
+          done

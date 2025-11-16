@@ -4,18 +4,24 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/geoffjay/agar/cmd/agar/internal/app"
 	"github.com/spf13/cobra"
 )
 
 var rootCmd = &cobra.Command{
 	Use:   "agar",
-	Short: "A CLI utility for creating new AI tools",
-	Long: `agar is a CLI utility for simplifying the creation of agar
-	applications. It provides commands for initializing new applications that use
-	the agar framework.`,
+	Short: "A framework for building AI agent applications",
+	Long: `Agar is a comprehensive framework for building AI agent applications
+with TUI components and tool management.
+
+Running 'agar' without arguments launches the interactive TUI interface.
+Use subcommands for specific operations.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// Default behavior when no subcommand is specified
-		cmd.Help()
+		// Launch TUI when no subcommand is specified
+		if err := app.RunTUI(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
 	},
 }
 
