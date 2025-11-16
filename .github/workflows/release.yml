@@ -1,0 +1,199 @@
+name: Release
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+jobs:
+  release:
+    name: Create Release
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      pull-requests: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Determine Version
+        id: version
+        run: |
+          BRANCH_NAME="${{ github.event.pull_request.head.ref }}"
+          echo "Branch name: $BRANCH_NAME"
+
+          # Check if branch name matches release/vX.Y.Z pattern
+          if [[ $BRANCH_NAME =~ ^release/v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            VERSION="v${BASH_REMATCH[1]}"
+            echo "Using version from branch name: $VERSION"
+          else
+            # Get latest tag
+            LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+            echo "Latest tag: $LATEST_TAG"
+
+            # Increment patch version
+            if [[ $LATEST_TAG =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+              MAJOR="${BASH_REMATCH[1]}"
+              MINOR="${BASH_REMATCH[2]}"
+              PATCH="${BASH_REMATCH[3]}"
+              NEW_PATCH=$((PATCH + 1))
+              VERSION="v${MAJOR}.${MINOR}.${NEW_PATCH}"
+            else
+              VERSION="v0.1.0"
+            fi
+            echo "Auto-incremented version: $VERSION"
+          fi
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Final version: $VERSION"
+
+      - name: Check if version already exists
+        id: check_version
+        run: |
+          if git rev-parse "${{ steps.version.outputs.version }}" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Version ${{ steps.version.outputs.version }} already exists"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "Version ${{ steps.version.outputs.version }} is new"
+          fi
+
+      - name: Run Tests
+        if: steps.check_version.outputs.exists == 'false'
+        run: |
+          go work sync
+          go test ./tools/... ./tui/... -v
+
+      - name: Release Library
+        if: steps.check_version.outputs.exists == 'false'
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+
+          echo "Creating library release: $VERSION"
+
+          # Create and push tag
+          git tag -a "$VERSION" -m "Release $VERSION"
+          git push origin "$VERSION"
+
+          # Create GitHub release
+          gh release create "$VERSION" \
+            --title "Agar $VERSION" \
+            --notes "Release $VERSION
+
+          ## What's Changed
+
+          See the [full changelog](https://github.com/${{ github.repository }}/compare/$VERSION...main) for details.
+
+          ## Installation
+
+          \`\`\`bash
+          go get github.com/geoffjay/agar@$VERSION
+          \`\`\`" \
+            --draft=false
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update CLI for Release
+        if: steps.check_version.outputs.exists == 'false'
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          cd cmd/agar
+
+          echo "Updating CLI to use library $VERSION"
+
+          # Remove replace directive
+          go mod edit -dropreplace=github.com/geoffjay/agar
+
+          # Update to use new library version
+          go mod edit -require=github.com/geoffjay/agar@$VERSION
+
+          # Tidy dependencies
+          GOWORK=off go mod tidy
+
+          # Verify it builds
+          GOWORK=off go build -v -o agar .
+
+          # Show the changes
+          git diff go.mod
+
+      - name: Commit CLI Changes
+        if: steps.check_version.outputs.exists == 'false'
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          cd cmd/agar
+
+          git add go.mod go.sum
+          git commit -m "chore(cli): update to agar $VERSION for release" || echo "No changes to commit"
+          git push origin main
+
+      - name: Release CLI
+        if: steps.check_version.outputs.exists == 'false'
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          CLI_TAG="cmd/agar/$VERSION"
+
+          echo "Creating CLI release: $CLI_TAG"
+
+          # Create and push tag
+          git tag -a "$CLI_TAG" -m "Release CLI $VERSION"
+          git push origin "$CLI_TAG"
+
+          # Build CLI binary for release
+          cd cmd/agar
+          GOWORK=off go build -v -ldflags="-s -w" -o agar .
+
+          # Create GitHub release
+          gh release create "$CLI_TAG" \
+            --title "Agar CLI $VERSION" \
+            --notes "Agar CLI $VERSION
+
+          ## Installation
+
+          \`\`\`bash
+          go install github.com/geoffjay/agar/cmd/agar@$VERSION
+          \`\`\`
+
+          ## Changes
+
+          - Uses agar library $VERSION
+          - AI-powered project scaffolding with BAML
+          - Interactive TUI interface
+
+          ## Requirements
+
+          Set \`ANTHROPIC_API_KEY\` environment variable for AI features." \
+            --draft=false \
+            agar
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Restore Replace Directive
+        if: steps.check_version.outputs.exists == 'false'
+        run: |
+          cd cmd/agar
+
+          echo "Restoring replace directive for development"
+
+          # Add back replace directive
+          go mod edit -replace=github.com/geoffjay/agar=../..
+
+          # Commit the restoration
+          git add go.mod
+          git commit -m "chore(cli): restore replace directive for development"
+          git push origin main
