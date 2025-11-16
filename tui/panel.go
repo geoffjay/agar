@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/mattn/go-runewidth"
 )
 
 // BorderStyle represents the style of border to use
@@ -277,11 +278,14 @@ func (p *Panel) Render() string {
 			line = ""
 		}
 
-		// Truncate or pad the line to fit
-		if len(line) > contentWidth {
-			line = line[:contentWidth]
-		} else {
-			line = line + strings.Repeat(" ", contentWidth-len(line))
+		// Truncate or pad the line to fit (use visual width, not byte length)
+		lineWidth := runewidth.StringWidth(line)
+		if lineWidth > contentWidth {
+			// Truncate to visual width
+			line = runewidth.Truncate(line, contentWidth, "")
+		} else if lineWidth < contentWidth {
+			// Pad to visual width
+			line = line + strings.Repeat(" ", contentWidth-lineWidth)
 		}
 
 		// Apply content style
