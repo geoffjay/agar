@@ -35,10 +35,16 @@ jobs:
             ${{ runner.os }}-go-${{ matrix.go-version }}-
 
       - name: Download dependencies
-        run: go mod download
+        run: |
+          go work sync
+          go mod download
+          cd cmd/agar && go mod download
 
-      - name: Run tests
-        run: go test ./... -v -race -coverprofile=coverage.out -covermode=atomic
+      - name: Run library tests
+        run: go test ./tools/... ./tui/... -v -race -coverprofile=coverage.out -covermode=atomic
+
+      - name: Run CLI tests
+        run: cd cmd/agar && go test ./... -v -race
 
       - name: Display coverage
         run: go tool cover -func=coverage.out
@@ -83,8 +89,17 @@ jobs:
         with:
           go-version: "1.23"
 
-      - name: Build
-        run: go build -v ./...
+      - name: Download dependencies
+        run: |
+          go work sync
+          go mod download
+          cd cmd/agar && go mod download
+
+      - name: Build library
+        run: go build -v ./tools/... ./tui/...
+
+      - name: Build CLI
+        run: cd cmd/agar && go build -v -o agar .
 
       - name: Build examples
         run: |
