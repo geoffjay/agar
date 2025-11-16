@@ -1,5 +1,8 @@
+cmd/agar/agar
+
 examples/*_demo
 examples/*/application
 examples/*/border
 examples/*/footer
 examples/*/input
+examples/*/prompt
