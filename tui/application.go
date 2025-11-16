@@ -60,10 +60,8 @@ func NewApplication(config ApplicationConfig) *Application {
 			cmdManager = commands.NewManager()
 		}
 		// Initialize command system (load built-in and file-based commands)
-		if err := cmdManager.Initialize(); err != nil {
-			// Log error but continue - command system will still work with any registered commands
-			// In production, you might want to handle this differently
-		}
+		// Errors are ignored as the command system will still work with built-in commands
+		_ = cmdManager.Initialize()
 	}
 
 	app := &Application{

@@ -165,7 +165,7 @@ func TestRegistryConcurrency(t *testing.T) {
 					return nil
 				},
 			)
-			registry.Register(cmd)
+			_ = registry.Register(cmd) // Ignore errors in concurrent test
 			done <- true
 		}(i)
 	}

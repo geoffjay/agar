@@ -188,7 +188,9 @@ func TestHandlerGetCompletions(t *testing.T) {
 				return nil
 			},
 		)
-		registry.Register(cmd)
+		if err := registry.Register(cmd); err != nil {
+			t.Fatalf("Failed to register command: %v", err)
+		}
 	}
 
 	// Test completions
