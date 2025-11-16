@@ -75,7 +75,7 @@ func TestGrepTool_Execute_BasicSearch(t *testing.T) {
 	testFile := filepath.Join(tmpDir, "test.txt")
 	content := "line1\ntest line\nline3\nanother test\nline5"
 
-	os.WriteFile(testFile, []byte(content), 0644)
+	_ = os.WriteFile(testFile, []byte(content), 0644)
 
 	tool := NewGrepTool()
 	ctx := context.Background()
@@ -110,7 +110,7 @@ func TestGrepTool_Execute_WithLineNumbers(t *testing.T) {
 	testFile := filepath.Join(tmpDir, "test.txt")
 	content := "line1\ntest line 2\nline3"
 
-	os.WriteFile(testFile, []byte(content), 0644)
+	_ = os.WriteFile(testFile, []byte(content), 0644)
 
 	tool := NewGrepTool()
 	ctx := context.Background()
@@ -145,7 +145,7 @@ func TestGrepTool_Execute_CaseInsensitive(t *testing.T) {
 	testFile := filepath.Join(tmpDir, "test.txt")
 	content := "TEST\nTest\ntest\nTeSt"
 
-	os.WriteFile(testFile, []byte(content), 0644)
+	_ = os.WriteFile(testFile, []byte(content), 0644)
 
 	tool := NewGrepTool()
 	ctx := context.Background()
@@ -174,7 +174,7 @@ func TestGrepTool_Execute_WordMatch(t *testing.T) {
 	testFile := filepath.Join(tmpDir, "test.txt")
 	content := "test\ntesting\ntest123\nthe test"
 
-	os.WriteFile(testFile, []byte(content), 0644)
+	_ = os.WriteFile(testFile, []byte(content), 0644)
 
 	tool := NewGrepTool()
 	ctx := context.Background()
@@ -204,7 +204,7 @@ func TestGrepTool_Execute_InvertMatch(t *testing.T) {
 	testFile := filepath.Join(tmpDir, "test.txt")
 	content := "line1\ntest line\nline3\nline4"
 
-	os.WriteFile(testFile, []byte(content), 0644)
+	_ = os.WriteFile(testFile, []byte(content), 0644)
 
 	tool := NewGrepTool()
 	ctx := context.Background()
@@ -234,7 +234,7 @@ func TestGrepTool_Execute_CaptureGroups(t *testing.T) {
 	testFile := filepath.Join(tmpDir, "test.txt")
 	content := "user: john, age: 30\nuser: jane, age: 25"
 
-	os.WriteFile(testFile, []byte(content), 0644)
+	_ = os.WriteFile(testFile, []byte(content), 0644)
 
 	tool := NewGrepTool()
 	ctx := context.Background()
@@ -276,7 +276,7 @@ func TestGrepTool_Execute_CountOnly(t *testing.T) {
 	testFile := filepath.Join(tmpDir, "test.txt")
 	content := "test\ntest\ntest"
 
-	os.WriteFile(testFile, []byte(content), 0644)
+	_ = os.WriteFile(testFile, []byte(content), 0644)
 
 	tool := NewGrepTool()
 	ctx := context.Background()
@@ -310,7 +310,7 @@ func TestGrepTool_Execute_MaxMatches(t *testing.T) {
 	testFile := filepath.Join(tmpDir, "test.txt")
 	content := "test\ntest\ntest\ntest\ntest"
 
-	os.WriteFile(testFile, []byte(content), 0644)
+	_ = os.WriteFile(testFile, []byte(content), 0644)
 
 	tool := NewGrepTool()
 	ctx := context.Background()
@@ -338,9 +338,9 @@ func TestGrepTool_Execute_Statistics(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create multiple files
-	os.WriteFile(filepath.Join(tmpDir, "file1.txt"), []byte("test\ntest"), 0644)
-	os.WriteFile(filepath.Join(tmpDir, "file2.txt"), []byte("no match"), 0644)
-	os.WriteFile(filepath.Join(tmpDir, "file3.txt"), []byte("test"), 0644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "file1.txt"), []byte("test\ntest"), 0644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "file2.txt"), []byte("no match"), 0644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "file3.txt"), []byte("test"), 0644)
 
 	tool := NewGrepTool()
 	ctx := context.Background()
@@ -383,8 +383,8 @@ func TestGrepTool_Execute_MultipleFiles(t *testing.T) {
 	file1 := filepath.Join(tmpDir, "file1.txt")
 	file2 := filepath.Join(tmpDir, "file2.txt")
 
-	os.WriteFile(file1, []byte("test in file 1"), 0644)
-	os.WriteFile(file2, []byte("test in file 2"), 0644)
+	_ = os.WriteFile(file1, []byte("test in file 1"), 0644)
+	_ = os.WriteFile(file2, []byte("test in file 2"), 0644)
 
 	tool := NewGrepTool()
 	ctx := context.Background()
@@ -420,9 +420,9 @@ func TestGrepTool_Execute_MultipleFiles(t *testing.T) {
 func TestGrepTool_Execute_GlobPattern(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	os.WriteFile(filepath.Join(tmpDir, "file1.txt"), []byte("test"), 0644)
-	os.WriteFile(filepath.Join(tmpDir, "file2.txt"), []byte("test"), 0644)
-	os.WriteFile(filepath.Join(tmpDir, "file3.md"), []byte("test"), 0644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "file1.txt"), []byte("test"), 0644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "file2.txt"), []byte("test"), 0644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "file3.md"), []byte("test"), 0644)
 
 	tool := NewGrepTool()
 	ctx := context.Background()
@@ -450,7 +450,7 @@ func TestGrepTool_Execute_NoMatches(t *testing.T) {
 	testFile := filepath.Join(tmpDir, "test.txt")
 	content := "line1\nline2\nline3"
 
-	os.WriteFile(testFile, []byte(content), 0644)
+	_ = os.WriteFile(testFile, []byte(content), 0644)
 
 	tool := NewGrepTool()
 	ctx := context.Background()
@@ -478,7 +478,7 @@ func TestGrepTool_Execute_PatternCounts(t *testing.T) {
 	testFile := filepath.Join(tmpDir, "test.txt")
 	content := "error: connection failed\nerror: timeout\nwarning: deprecated"
 
-	os.WriteFile(testFile, []byte(content), 0644)
+	_ = os.WriteFile(testFile, []byte(content), 0644)
 
 	tool := NewGrepTool()
 	ctx := context.Background()
@@ -510,7 +510,7 @@ func TestGrepTool_Execute_MultipleCaptures(t *testing.T) {
 	testFile := filepath.Join(tmpDir, "test.txt")
 	content := "Name: John, Age: 30\nName: Jane, Age: 25"
 
-	os.WriteFile(testFile, []byte(content), 0644)
+	_ = os.WriteFile(testFile, []byte(content), 0644)
 
 	tool := NewGrepTool()
 	ctx := context.Background()

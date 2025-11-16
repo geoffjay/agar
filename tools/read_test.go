@@ -350,7 +350,7 @@ func TestReadTool_DetectFormat(t *testing.T) {
 		tmpDir := t.TempDir()
 		binFile := filepath.Join(tmpDir, "test.bin")
 		// Write binary data with null bytes
-		os.WriteFile(binFile, []byte{0x00, 0x01, 0x02}, 0644)
+		_ = os.WriteFile(binFile, []byte{0x00, 0x01, 0x02}, 0644)
 
 		got := detectFormat(binFile)
 		if got != "binary" {

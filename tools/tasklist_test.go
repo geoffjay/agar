@@ -215,7 +215,7 @@ func TestTaskListTool_ListLists(t *testing.T) {
 			"title":  "List " + string(rune('A'+i)),
 		}
 		paramsJSON, _ := json.Marshal(params)
-		tool.Execute(ctx, paramsJSON)
+		_, _ = tool.Execute(ctx, paramsJSON)
 	}
 
 	// List all lists
@@ -256,7 +256,7 @@ func TestTaskListTool_ListTasks(t *testing.T) {
 			"title":   "Task " + string(rune('1'+i)),
 		}
 		paramsJSON, _ := json.Marshal(params)
-		tool.Execute(ctx, paramsJSON)
+		_, _ = tool.Execute(ctx, paramsJSON)
 	}
 
 	// List tasks in the list

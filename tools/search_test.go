@@ -75,7 +75,7 @@ func TestSearchTool_Execute_SingleFile(t *testing.T) {
 	testFile := filepath.Join(tmpDir, "test.txt")
 	content := "line1\ntest line 2\nline3\nanother test line\nline5"
 
-	os.WriteFile(testFile, []byte(content), 0644)
+	_ = os.WriteFile(testFile, []byte(content), 0644)
 
 	tool := NewSearchTool()
 	ctx := context.Background()
@@ -124,7 +124,7 @@ func TestSearchTool_Execute_WithContext(t *testing.T) {
 	testFile := filepath.Join(tmpDir, "test.txt")
 	content := "line1\nline2\ntest line 3\nline4\nline5"
 
-	os.WriteFile(testFile, []byte(content), 0644)
+	_ = os.WriteFile(testFile, []byte(content), 0644)
 
 	tool := NewSearchTool()
 	ctx := context.Background()
@@ -172,7 +172,7 @@ func TestSearchTool_Execute_CaseInsensitive(t *testing.T) {
 	testFile := filepath.Join(tmpDir, "test.txt")
 	content := "TEST\nTest\ntest\nTeSt"
 
-	os.WriteFile(testFile, []byte(content), 0644)
+	_ = os.WriteFile(testFile, []byte(content), 0644)
 
 	tool := NewSearchTool()
 	ctx := context.Background()
@@ -200,17 +200,17 @@ func TestSearchTool_Execute_Recursive(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create files in root
-	os.WriteFile(filepath.Join(tmpDir, "file1.txt"), []byte("test in file 1"), 0644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "file1.txt"), []byte("test in file 1"), 0644)
 
 	// Create subdirectory with files
 	subDir := filepath.Join(tmpDir, "subdir")
-	os.Mkdir(subDir, 0755)
-	os.WriteFile(filepath.Join(subDir, "file2.txt"), []byte("test in file 2"), 0644)
+	_ = os.Mkdir(subDir, 0755)
+	_ = os.WriteFile(filepath.Join(subDir, "file2.txt"), []byte("test in file 2"), 0644)
 
 	// Create nested directory with files
 	nestedDir := filepath.Join(subDir, "nested")
-	os.Mkdir(nestedDir, 0755)
-	os.WriteFile(filepath.Join(nestedDir, "file3.txt"), []byte("test in file 3"), 0644)
+	_ = os.Mkdir(nestedDir, 0755)
+	_ = os.WriteFile(filepath.Join(nestedDir, "file3.txt"), []byte("test in file 3"), 0644)
 
 	tool := NewSearchTool()
 	ctx := context.Background()
@@ -241,9 +241,9 @@ func TestSearchTool_Execute_Recursive(t *testing.T) {
 func TestSearchTool_Execute_WithFilePattern(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	os.WriteFile(filepath.Join(tmpDir, "file1.txt"), []byte("test content"), 0644)
-	os.WriteFile(filepath.Join(tmpDir, "file2.go"), []byte("test content"), 0644)
-	os.WriteFile(filepath.Join(tmpDir, "file3.txt"), []byte("test content"), 0644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "file1.txt"), []byte("test content"), 0644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "file2.go"), []byte("test content"), 0644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "file3.txt"), []byte("test content"), 0644)
 
 	tool := NewSearchTool()
 	ctx := context.Background()
@@ -270,9 +270,9 @@ func TestSearchTool_Execute_WithFilePattern(t *testing.T) {
 func TestSearchTool_Execute_WithIncludeExclude(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	os.WriteFile(filepath.Join(tmpDir, "file1.txt"), []byte("test content"), 0644)
-	os.WriteFile(filepath.Join(tmpDir, "file2.md"), []byte("test content"), 0644)
-	os.WriteFile(filepath.Join(tmpDir, "file3.tmp"), []byte("test content"), 0644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "file1.txt"), []byte("test content"), 0644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "file2.md"), []byte("test content"), 0644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "file3.tmp"), []byte("test content"), 0644)
 
 	tool := NewSearchTool()
 	ctx := context.Background()
@@ -302,7 +302,7 @@ func TestSearchTool_Execute_MaxResults(t *testing.T) {
 	testFile := filepath.Join(tmpDir, "test.txt")
 	content := "test\ntest\ntest\ntest\ntest"
 
-	os.WriteFile(testFile, []byte(content), 0644)
+	_ = os.WriteFile(testFile, []byte(content), 0644)
 
 	tool := NewSearchTool()
 	ctx := context.Background()
@@ -331,7 +331,7 @@ func TestSearchTool_Execute_RegexPattern(t *testing.T) {
 	testFile := filepath.Join(tmpDir, "test.go")
 	content := "func main() {}\nfunc testFunc() {}\nvar x = 10\nfunc anotherFunc() {}"
 
-	os.WriteFile(testFile, []byte(content), 0644)
+	_ = os.WriteFile(testFile, []byte(content), 0644)
 
 	tool := NewSearchTool()
 	ctx := context.Background()
@@ -359,7 +359,7 @@ func TestSearchTool_Execute_NoMatches(t *testing.T) {
 	testFile := filepath.Join(tmpDir, "test.txt")
 	content := "line1\nline2\nline3"
 
-	os.WriteFile(testFile, []byte(content), 0644)
+	_ = os.WriteFile(testFile, []byte(content), 0644)
 
 	tool := NewSearchTool()
 	ctx := context.Background()
@@ -387,7 +387,7 @@ func TestSearchTool_Execute_MatchPosition(t *testing.T) {
 	testFile := filepath.Join(tmpDir, "test.txt")
 	content := "This is a test line"
 
-	os.WriteFile(testFile, []byte(content), 0644)
+	_ = os.WriteFile(testFile, []byte(content), 0644)
 
 	tool := NewSearchTool()
 	ctx := context.Background()
