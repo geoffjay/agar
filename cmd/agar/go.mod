@@ -5,7 +5,7 @@ go 1.25.2
 require (
 	github.com/boundaryml/baml v0.213.0
 	github.com/charmbracelet/bubbletea v1.3.10
-	github.com/geoffjay/agar v0.0.0-20251116054749-618e4dbc5d0c
+	github.com/geoffjay/agar v0.0.0
 	github.com/spf13/cobra v1.10.1
 )
 
@@ -34,4 +34,4 @@ require (
 	google.golang.org/protobuf v1.36.6 // indirect
 )
 
-replace github.com/geoffjay/agar => /Users/geoff/Projects/agar
+replace github.com/geoffjay/agar => ../..
