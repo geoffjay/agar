@@ -37,4 +37,12 @@ func Execute() {
 func init() {
 	// Global flags can be added here
 	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.agar.yaml)")
+
+	// Add subcommands
+	// Note: Subcommands will be added from internal/commands package
+}
+
+// AddCommand adds a subcommand to the root command
+func AddCommand(cmd *cobra.Command) {
+	rootCmd.AddCommand(cmd)
 }
