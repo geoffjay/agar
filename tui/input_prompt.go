@@ -99,6 +99,15 @@ func (m PromptModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 
 		case "enter":
+			// If completions are shown, select the highlighted one
+			if m.showCompletions && len(m.completions) > 0 {
+				completion := m.completions[m.completionIndex]
+				m.input = "/" + completion
+				m.showCompletions = false
+				m.completions = []string{}
+				return m, nil
+			}
+
 			if m.mode == SingleLineMode {
 				// Single-line: Enter submits
 				return m.submit()
@@ -155,6 +164,7 @@ func (m PromptModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "backspace":
 			if len(m.input) > 0 {
 				m.input = m.input[:len(m.input)-1]
+				m.updateCompletions()
 			}
 
 		case "ctrl+u":
@@ -181,11 +191,16 @@ func (m PromptModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if len(msg.String()) == 1 || msg.Type == tea.KeySpace {
 				if msg.Type == tea.KeySpace {
 					m.input += " "
+					// Dismiss completions if space is typed after a valid command
+					if m.showCompletions {
+						m.showCompletions = false
+						m.completions = []string{}
+					}
 				} else {
 					m.input += msg.String()
+					// Update completions when input changes
+					m.updateCompletions()
 				}
-				// Update completions when input changes
-				m.updateCompletions()
 			}
 		}
 	}

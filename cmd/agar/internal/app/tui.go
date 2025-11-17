@@ -27,13 +27,14 @@ func RunTUI() error {
 
 	// Create TUI application
 	app := tui.NewApplication(tui.ApplicationConfig{
-		Title:        "Agar",
-		Version:      "0.1.0",
-		Mode:         "INTERACTIVE",
-		Directory:    cwd,
-		PanelMargin:  1,
-		PanelPadding: 1,
-		BorderStyle:  tui.RoundedBorder,
+		Title:          "Agar",
+		Version:        "0.1.0",
+		Mode:           "INTERACTIVE",
+		Directory:      cwd,
+		PanelMargin:    0,
+		PanelPadding:   1,
+		BorderStyle:    tui.NoBorder,
+		EnableCommands: true, // Explicitly enable command system
 	})
 
 	// Add welcome content
@@ -59,9 +60,19 @@ func RunTUI() error {
 	app.AddLine("Type a command below or press Ctrl+C to exit.")
 	app.AddLine("")
 
-	// Create prompt
-	prompt := tui.NewPromptInput("> ", "Type 'help' for commands...", tui.SingleLineMode).
-		WithHistory(true)
+	// Create prompt (no placeholder for cleaner look)
+	cmdMgr := app.GetCommandManager()
+	if cmdMgr != nil {
+		app.AddLine(fmt.Sprintf("Command system loaded with %d commands", len(cmdMgr.ListCommands())))
+		app.AddLine("")
+	} else {
+		app.AddLine("Warning: Command system not initialized")
+		app.AddLine("")
+	}
+
+	prompt := tui.NewPromptInput("λ ", "", tui.SingleLineMode).
+		WithHistory(true).
+		WithCommandManager(cmdMgr)
 
 	model := cliModel{
 		app:    app,
@@ -218,32 +229,72 @@ func (m *cliModel) showComponents() {
 }
 
 func (m cliModel) View() string {
-	var b strings.Builder
-
-	// Calculate heights
-	promptHeight := 2 // Prompt + help text
+	// Calculate panel height with margins: 1 top + panel + 1 bottom + footer
+	topMargin := 1
+	bottomMargin := 1
 	footerHeight := 1
-	separatorHeight := 1
-	contentHeight := m.height - promptHeight - footerHeight - separatorHeight
+	panelHeight := m.height - topMargin - bottomMargin - footerHeight
 
-	// Update app size
-	updatedApp, _ := m.app.Update(tea.WindowSizeMsg{Width: m.width, Height: contentHeight})
-	m.app = updatedApp.(*tui.Application)
+	// Update panel size
+	panel := m.app.GetPanel()
+	panel.SetSize(m.width, panelHeight)
 
-	// Render application (content + footer)
-	appView := m.app.View()
-	b.WriteString(appView)
+	// Get content lines
+	contentLines := m.app.GetContent()
 
-	// Separator line
-	b.WriteString("\n")
-	separator := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("241")).
-		Render(strings.Repeat("─", m.width))
-	b.WriteString(separator)
-	b.WriteString("\n")
+	// Calculate available lines for content (leave room for prompt)
+	promptViewLines := strings.Count(m.prompt.View(), "\n") + 1
+	separatorLines := 1
+	availableContentLines := panel.GetContentHeight() - promptViewLines - separatorLines
 
-	// Render prompt
-	b.WriteString(m.prompt.View())
+	// Get visible content (auto-scroll to bottom)
+	start := 0
+	if len(contentLines) > availableContentLines {
+		start = len(contentLines) - availableContentLines
+	}
+	visibleContent := contentLines[start:]
 
-	return b.String()
+	// Build panel content: content + separator + prompt
+	var panelContent strings.Builder
+	panelContent.WriteString(strings.Join(visibleContent, "\n"))
+	panelContent.WriteString("\n")
+	panelContent.WriteString(strings.Repeat("─", panel.GetContentWidth()))
+	panelContent.WriteString("\n")
+	panelContent.WriteString(m.prompt.View())
+
+	panel.SetContent(panelContent.String())
+
+	// Render panel (trim leading newlines from margin)
+	panelRendered := panel.Render()
+	panelRendered = strings.TrimLeft(panelRendered, "\n")
+
+	// Build output
+	var output strings.Builder
+
+	// Top margin (1 line)
+	output.WriteString("\n")
+
+	// Panel
+	output.WriteString(panelRendered)
+
+	// Count total lines so far (top margin + panel)
+	currentOutput := output.String()
+	currentLines := strings.Count(currentOutput, "\n") + 1
+
+	// Calculate how many newlines needed to reach m.height
+	// We want footer on line m.height, so we need (m.height - currentLines - 1) newlines
+	fillLines := m.height - currentLines - 1
+
+	// Add fill lines (this includes the bottom margin)
+	if fillLines > 0 {
+		output.WriteString(strings.Repeat("\n", fillLines))
+	}
+
+	// Add final newline before footer
+	output.WriteString("\n")
+
+	// Footer (on line m.height)
+	output.WriteString(m.app.GetFooter().View())
+
+	return output.String()
 }

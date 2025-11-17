@@ -64,7 +64,7 @@ func initProject(projectName, requirements string) error {
 	fmt.Printf("  Features: %d planned\n", len(config.Features))
 
 	// Create project directory
-	if err := os.MkdirAll(projectName, 0755); err != nil {
+	if err = os.MkdirAll(projectName, 0o755); err != nil {
 		return fmt.Errorf("failed to create project directory: %w", err)
 	}
 
@@ -78,7 +78,7 @@ func initProject(projectName, requirements string) error {
 
 	// Create go.mod
 	goModContent := generateGoMod(config)
-	if err := writeFile(writeTool, ctx, filepath.Join(projectName, "go.mod"), goModContent); err != nil {
+	if err = writeFile(writeTool, ctx, filepath.Join(projectName, "go.mod"), goModContent); err != nil {
 		return fmt.Errorf("failed to create go.mod: %w", err)
 	}
 	fmt.Println("  ✓ go.mod")
