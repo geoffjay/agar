@@ -7,6 +7,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/geoffjay/agar/tools"
 	"github.com/geoffjay/agar/tui"
 )
 
@@ -25,6 +26,20 @@ func RunTUI() error {
 		cwd = "/"
 	}
 
+	// Create tool registry and register built-in tools
+	toolRegistry := tools.NewToolRegistry()
+	toolRegistry.Register(tools.NewReadTool())
+	toolRegistry.Register(tools.NewWriteTool())
+	toolRegistry.Register(tools.NewDeleteTool())
+	toolRegistry.Register(tools.NewListTool())
+	toolRegistry.Register(tools.NewGlobTool())
+	toolRegistry.Register(tools.NewFetchTool())
+	toolRegistry.Register(tools.NewDownloadTool())
+	toolRegistry.Register(tools.NewSearchTool())
+	toolRegistry.Register(tools.NewGrepTool())
+	toolRegistry.Register(tools.NewShellTool())
+	toolRegistry.Register(tools.NewTaskListTool())
+
 	// Create TUI application
 	app := tui.NewApplication(tui.ApplicationConfig{
 		Title:          "Agar",
@@ -35,7 +50,14 @@ func RunTUI() error {
 		PanelPadding:   1,
 		BorderStyle:    tui.NoBorder,
 		EnableCommands: true, // Explicitly enable command system
+		ToolRegistry:   toolRegistry,
 	})
+
+	// Register CLI-specific commands
+	initCmd := NewInitCommand()
+	if err := app.RegisterCommand(initCmd); err != nil {
+		fmt.Printf("Warning: failed to register /init command: %v\n", err)
+	}
 
 	// Add welcome content
 	app.AddLine("")
@@ -46,24 +68,21 @@ func RunTUI() error {
 	app.AddLine("")
 	app.AddLine("─────────────────────────────────────────────────────────────────────────────────────────")
 	app.AddLine("")
-	app.AddLine("AVAILABLE COMMANDS")
+	app.AddLine("GETTING STARTED")
 	app.AddLine("")
-	app.AddLine("  help              Show this help message")
-	app.AddLine("  tools             List available tools")
-	app.AddLine("  components        List TUI components")
-	app.AddLine("  init <name>       Initialize a new Agar project (requires ANTHROPIC_API_KEY)")
-	app.AddLine("  clear             Clear the screen")
-	app.AddLine("  exit              Exit the CLI")
+	app.AddLine("  Type /help to see all available slash commands")
+	app.AddLine("  Type /tools to see all available tools")
+	app.AddLine("  Type /init <name> to create a new Agar project")
+	app.AddLine("")
+	app.AddLine("  Enter any text without a leading / to submit it as a prompt")
 	app.AddLine("")
 	app.AddLine("─────────────────────────────────────────────────────────────────────────────────────────")
-	app.AddLine("")
-	app.AddLine("Type a command below or press Ctrl+C to exit.")
 	app.AddLine("")
 
 	// Create prompt (no placeholder for cleaner look)
 	cmdMgr := app.GetCommandManager()
 	if cmdMgr != nil {
-		app.AddLine(fmt.Sprintf("Command system loaded with %d commands", len(cmdMgr.ListCommands())))
+		app.AddLine(fmt.Sprintf("✓ Loaded %d slash commands and %d tools", len(cmdMgr.ListCommands()), toolRegistry.Count()))
 		app.AddLine("")
 	} else {
 		app.AddLine("Warning: Command system not initialized")
@@ -115,6 +134,13 @@ func (m cliModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tui.PromptSubmitMsg:
 		input := strings.TrimSpace(msg.Input)
 
+		// Skip empty input
+		if input == "" {
+			updated, cmd := m.prompt.Update(msg)
+			m.prompt = updated.(tui.PromptModel)
+			return m, cmd
+		}
+
 		// Check if this is a slash command
 		if strings.HasPrefix(input, "/") {
 			// Echo the command to the output
@@ -133,8 +159,15 @@ func (m cliModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Batch(appCmd, cmd)
 		}
 
-		// Process non-slash commands with the hardcoded handler
-		m.handleCommand(input)
+		// Non-slash input: submit as prompt to AI agent
+		m.app.AddLine("")
+		m.app.AddLine(lipgloss.NewStyle().Foreground(lipgloss.Color("86")).Render("> " + input))
+		m.app.AddLine("")
+
+		// TODO: Submit to BAML/AI agent - for now just echo back
+		m.app.AddLine("AI response for: " + input)
+		m.app.AddLine("(Note: BAML integration pending)")
+		m.app.AddLine("")
 
 		// Update prompt to clear it
 		updated, cmd := m.prompt.Update(msg)
@@ -146,106 +179,6 @@ func (m cliModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	updated, cmd := m.prompt.Update(msg)
 	m.prompt = updated.(tui.PromptModel)
 	return m, cmd
-}
-
-func (m *cliModel) handleCommand(input string) {
-	input = strings.TrimSpace(input)
-	if input == "" {
-		return
-	}
-
-	parts := strings.Fields(input)
-	command := parts[0]
-
-	m.app.AddLine("")
-	m.app.AddLine(lipgloss.NewStyle().Foreground(lipgloss.Color("86")).Render("> " + input))
-
-	switch command {
-	case "help":
-		m.showHelp()
-
-	case "tools":
-		m.showTools()
-
-	case "components":
-		m.showComponents()
-
-	case "init":
-		if len(parts) < 2 {
-			m.app.AddLine(lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Render("Error: init requires a project name"))
-			m.app.AddLine("Usage: init <project-name>")
-		} else {
-			projectName := parts[1]
-			m.app.AddLine(fmt.Sprintf("Initializing project '%s'...", projectName))
-			m.app.AddLine("Note: Set ANTHROPIC_API_KEY environment variable for AI features")
-			m.app.AddLine("Tip: Use 'agar init' command outside TUI for full functionality")
-		}
-
-	case "clear":
-		m.app.Clear()
-		m.app.AddLine("Screen cleared. Type 'help' for available commands.")
-
-	case "exit", "quit":
-		m.app.AddLine("Goodbye!")
-
-	default:
-		m.app.AddLine(lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Render(fmt.Sprintf("Unknown command: %s", command)))
-		m.app.AddLine("Type 'help' to see available commands")
-	}
-
-	m.app.AddLine("")
-}
-
-func (m *cliModel) showHelp() {
-	m.app.AddLine("Available commands:")
-	m.app.AddLine("  help              Show this help message")
-	m.app.AddLine("  tools             List available tools")
-	m.app.AddLine("  components        List TUI components")
-	m.app.AddLine("  init <name>       Initialize a new project")
-	m.app.AddLine("  clear             Clear the screen")
-	m.app.AddLine("  exit              Exit the CLI")
-}
-
-func (m *cliModel) showTools() {
-	m.app.AddLine("Available Tools (11):")
-	m.app.AddLine("")
-	m.app.AddLine("File Operations:")
-	m.app.AddLine("  • read      - Read files with format detection")
-	m.app.AddLine("  • write     - Write files with backup support")
-	m.app.AddLine("  • delete    - Delete files/directories")
-	m.app.AddLine("  • list      - List directory contents")
-	m.app.AddLine("  • glob      - Pattern matching with ** support")
-	m.app.AddLine("")
-	m.app.AddLine("Web Access:")
-	m.app.AddLine("  • fetch     - HTTP requests with auth")
-	m.app.AddLine("  • download  - Download files with resume")
-	m.app.AddLine("")
-	m.app.AddLine("Search:")
-	m.app.AddLine("  • search    - Regex content search")
-	m.app.AddLine("  • grep      - Advanced pattern matching")
-	m.app.AddLine("")
-	m.app.AddLine("System:")
-	m.app.AddLine("  • shell     - Execute shell commands")
-	m.app.AddLine("  • tasklist  - Manage task lists")
-}
-
-func (m *cliModel) showComponents() {
-	m.app.AddLine("Available TUI Components:")
-	m.app.AddLine("")
-	m.app.AddLine("  Application   Complete app framework with layout")
-	m.app.AddLine("  Panel         Configurable content areas with borders")
-	m.app.AddLine("  Footer        Status bar component")
-	m.app.AddLine("  Layout        Vertical/horizontal containers")
-	m.app.AddLine("  Prompt        Interactive input with history")
-	m.app.AddLine("")
-	m.app.AddLine("Input Components:")
-	m.app.AddLine("  • Text        - Single/multi-line text input")
-	m.app.AddLine("  • YesNo       - Yes/No questions")
-	m.app.AddLine("  • Options     - Single selection from list")
-	m.app.AddLine("  • MultiSelect - Multiple selections")
-	m.app.AddLine("")
-	m.app.AddLine("Form Components:")
-	m.app.AddLine("  • IterativeForm - Q&A sessions")
 }
 
 func (m cliModel) View() string {

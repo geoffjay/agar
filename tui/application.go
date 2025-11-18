@@ -6,6 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/geoffjay/agar/commands"
+	"github.com/geoffjay/agar/tools"
 )
 
 // Application represents a complete TUI application with layout, panel, and footer
@@ -22,6 +23,7 @@ type Application struct {
 	height         int
 	scrollOffset   int
 	commandManager *commands.Manager
+	toolRegistry   *tools.ToolRegistry
 	metadata       map[string]interface{}
 	shouldExit     bool
 	ctx            context.Context
@@ -36,8 +38,9 @@ type ApplicationConfig struct {
 	PanelMargin      int
 	PanelPadding     int
 	BorderStyle      BorderStyle
-	CommandPaths     []string // Optional custom command paths
-	EnableCommands   bool     // Enable slash command system (default: true)
+	CommandPaths     []string            // Optional custom command paths
+	EnableCommands   bool                // Enable slash command system (default: true)
+	ToolRegistry     *tools.ToolRegistry // Optional tool registry for /tools command
 }
 
 // NewApplication creates a new application with the specified configuration
@@ -62,6 +65,12 @@ func NewApplication(config ApplicationConfig) *Application {
 		// Initialize command system (load built-in and file-based commands)
 		// Errors are ignored as the command system will still work with built-in commands
 		_ = cmdManager.Initialize()
+
+		// Register /tools command if tool registry is provided
+		if config.ToolRegistry != nil {
+			toolsCmd := commands.NewToolsCommand(config.ToolRegistry)
+			_ = cmdManager.RegisterCommand(toolsCmd)
+		}
 	}
 
 	app := &Application{
@@ -77,6 +86,7 @@ func NewApplication(config ApplicationConfig) *Application {
 		height:         24,
 		scrollOffset:   0,
 		commandManager: cmdManager,
+		toolRegistry:   config.ToolRegistry,
 		metadata:       make(map[string]interface{}),
 		shouldExit:     false,
 		ctx:            context.Background(),
