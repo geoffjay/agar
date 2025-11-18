@@ -79,9 +79,9 @@ func TestGlobTool_Execute_SimplePattern(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create test files
-	os.WriteFile(filepath.Join(tmpDir, "file1.txt"), []byte("content1"), 0644)
-	os.WriteFile(filepath.Join(tmpDir, "file2.txt"), []byte("content2"), 0644)
-	os.WriteFile(filepath.Join(tmpDir, "file3.md"), []byte("content3"), 0644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "file1.txt"), []byte("content1"), 0644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "file2.txt"), []byte("content2"), 0644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "file3.md"), []byte("content3"), 0644)
 
 	tool := NewGlobTool()
 	ctx := context.Background()
@@ -111,9 +111,9 @@ func TestGlobTool_Execute_MultiplePatterns(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create test files
-	os.WriteFile(filepath.Join(tmpDir, "file1.txt"), []byte("content1"), 0644)
-	os.WriteFile(filepath.Join(tmpDir, "file2.md"), []byte("content2"), 0644)
-	os.WriteFile(filepath.Join(tmpDir, "file3.go"), []byte("content3"), 0644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "file1.txt"), []byte("content1"), 0644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "file2.md"), []byte("content2"), 0644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "file3.go"), []byte("content3"), 0644)
 
 	tool := NewGlobTool()
 	ctx := context.Background()
@@ -140,17 +140,17 @@ func TestGlobTool_Execute_RecursivePattern(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create test files in root
-	os.WriteFile(filepath.Join(tmpDir, "file1.txt"), []byte("content1"), 0644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "file1.txt"), []byte("content1"), 0644)
 
 	// Create subdirectory with files
 	subDir := filepath.Join(tmpDir, "subdir")
-	os.Mkdir(subDir, 0755)
-	os.WriteFile(filepath.Join(subDir, "file2.txt"), []byte("content2"), 0644)
+	_ = os.Mkdir(subDir, 0755)
+	_ = os.WriteFile(filepath.Join(subDir, "file2.txt"), []byte("content2"), 0644)
 
 	// Create nested subdirectory with files
 	nestedDir := filepath.Join(subDir, "nested")
-	os.Mkdir(nestedDir, 0755)
-	os.WriteFile(filepath.Join(nestedDir, "file3.txt"), []byte("content3"), 0644)
+	_ = os.Mkdir(nestedDir, 0755)
+	_ = os.WriteFile(filepath.Join(nestedDir, "file3.txt"), []byte("content3"), 0644)
 
 	tool := NewGlobTool()
 	ctx := context.Background()
@@ -176,7 +176,7 @@ func TestGlobTool_Execute_RecursivePattern(t *testing.T) {
 func TestGlobTool_Execute_WithIncludeInfo(t *testing.T) {
 	tmpDir := t.TempDir()
 	testFile := filepath.Join(tmpDir, "test.txt")
-	os.WriteFile(testFile, []byte("test content"), 0644)
+	_ = os.WriteFile(testFile, []byte("test content"), 0644)
 
 	tool := NewGlobTool()
 	ctx := context.Background()
@@ -218,9 +218,9 @@ func TestGlobTool_Execute_SortByName(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create test files
-	os.WriteFile(filepath.Join(tmpDir, "charlie.txt"), []byte("content"), 0644)
-	os.WriteFile(filepath.Join(tmpDir, "alpha.txt"), []byte("content"), 0644)
-	os.WriteFile(filepath.Join(tmpDir, "bravo.txt"), []byte("content"), 0644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "charlie.txt"), []byte("content"), 0644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "alpha.txt"), []byte("content"), 0644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "bravo.txt"), []byte("content"), 0644)
 
 	tool := NewGlobTool()
 	ctx := context.Background()
@@ -257,9 +257,9 @@ func TestGlobTool_Execute_SortBySize(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create test files with different sizes
-	os.WriteFile(filepath.Join(tmpDir, "small.txt"), []byte("a"), 0644)          // 1 byte
-	os.WriteFile(filepath.Join(tmpDir, "large.txt"), []byte("aaaaaa"), 0644)     // 6 bytes
-	os.WriteFile(filepath.Join(tmpDir, "medium.txt"), []byte("aaa"), 0644)       // 3 bytes
+	_ = os.WriteFile(filepath.Join(tmpDir, "small.txt"), []byte("a"), 0644)          // 1 byte
+	_ = os.WriteFile(filepath.Join(tmpDir, "large.txt"), []byte("aaaaaa"), 0644)     // 6 bytes
+	_ = os.WriteFile(filepath.Join(tmpDir, "medium.txt"), []byte("aaa"), 0644)       // 3 bytes
 
 	tool := NewGlobTool()
 	ctx := context.Background()
@@ -298,9 +298,9 @@ func TestGlobTool_Execute_SortDescending(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create test files
-	os.WriteFile(filepath.Join(tmpDir, "a.txt"), []byte("content"), 0644)
-	os.WriteFile(filepath.Join(tmpDir, "b.txt"), []byte("content"), 0644)
-	os.WriteFile(filepath.Join(tmpDir, "c.txt"), []byte("content"), 0644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "a.txt"), []byte("content"), 0644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "b.txt"), []byte("content"), 0644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "c.txt"), []byte("content"), 0644)
 
 	tool := NewGlobTool()
 	ctx := context.Background()
@@ -334,7 +334,7 @@ func TestGlobTool_Execute_NoMatches(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create a file that won't match
-	os.WriteFile(filepath.Join(tmpDir, "file.txt"), []byte("content"), 0644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "file.txt"), []byte("content"), 0644)
 
 	tool := NewGlobTool()
 	ctx := context.Background()

@@ -70,6 +70,19 @@ func (r *ToolRegistry) List() []string {
 	return names
 }
 
+// ListTools returns a list of all registered Tool objects
+func (r *ToolRegistry) ListTools() []Tool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	tools := make([]Tool, 0, len(r.tools))
+	for _, tool := range r.tools {
+		tools = append(tools, tool)
+	}
+
+	return tools
+}
+
 // Count returns the number of registered tools
 func (r *ToolRegistry) Count() int {
 	r.mu.RLock()

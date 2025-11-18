@@ -33,6 +33,7 @@ jobs:
           key: ${{ runner.os }}-go-${{ matrix.go-version }}-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-${{ matrix.go-version }}-
+        continue-on-error: true
 
       - name: Download dependencies
         run: |
@@ -40,8 +41,17 @@ jobs:
           go mod download
           cd cmd/agar && go mod download
 
-      - name: Run library tests
-        run: go test ./tools/... ./tui/... -v -race -coverprofile=coverage.out -covermode=atomic
+      - name: Run library tests with race detector
+        run: go test ./tools/... ./tui/... ./commands/... -v -race
+
+      - name: Run library tests with coverage
+        run: |
+          set +e
+          go test ./tools/... ./tui/... ./commands/... -v -coverprofile=coverage.out -covermode=atomic 2>&1 | tee test-output.log
+          if grep -q "FAIL" test-output.log; then
+            exit 1
+          fi
+          exit 0
 
       - name: Run CLI tests
         run: cd cmd/agar && go test ./... -v -race

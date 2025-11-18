@@ -1,35 +1,46 @@
 package tui
 
 import (
+	"context"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/geoffjay/agar/commands"
+	"github.com/geoffjay/agar/tools"
 )
 
 // Application represents a complete TUI application with layout, panel, and footer
 type Application struct {
-	title       string
-	version     string
-	mode        string
-	directory   string
-	panel       *Panel
-	footer      FooterModel
-	layout      *Layout
-	content     []string
-	width       int
-	height      int
-	scrollOffset int
+	title          string
+	version        string
+	mode           string
+	directory      string
+	panel          *Panel
+	footer         FooterModel
+	layout         *Layout
+	content        []string
+	width          int
+	height         int
+	scrollOffset   int
+	commandManager *commands.Manager
+	toolRegistry   *tools.ToolRegistry
+	metadata       map[string]interface{}
+	shouldExit     bool
+	ctx            context.Context
 }
 
 // ApplicationConfig holds configuration for creating a new Application
 type ApplicationConfig struct {
-	Title        string
-	Version      string
-	Mode         string
-	Directory    string
-	PanelMargin  int
-	PanelPadding int
-	BorderStyle  BorderStyle
+	Title            string
+	Version          string
+	Mode             string
+	Directory        string
+	PanelMargin      int
+	PanelPadding     int
+	BorderStyle      BorderStyle
+	CommandPaths     []string            // Optional custom command paths
+	EnableCommands   bool                // Enable slash command system (default: true)
+	ToolRegistry     *tools.ToolRegistry // Optional tool registry for /tools command
 }
 
 // NewApplication creates a new application with the specified configuration
@@ -43,18 +54,42 @@ func NewApplication(config ApplicationConfig) *Application {
 	// Create the layout (vertical)
 	layout := NewLayout(Vertical)
 
+	// Initialize command system if enabled (default: true)
+	var cmdManager *commands.Manager
+	if config.EnableCommands {
+		if len(config.CommandPaths) > 0 {
+			cmdManager = commands.NewManagerWithPaths(config.CommandPaths...)
+		} else {
+			cmdManager = commands.NewManager()
+		}
+		// Initialize command system (load built-in and file-based commands)
+		// Errors are ignored as the command system will still work with built-in commands
+		_ = cmdManager.Initialize()
+
+		// Register /tools command if tool registry is provided
+		if config.ToolRegistry != nil {
+			toolsCmd := commands.NewToolsCommand(config.ToolRegistry)
+			_ = cmdManager.RegisterCommand(toolsCmd)
+		}
+	}
+
 	app := &Application{
-		title:        config.Title,
-		version:      config.Version,
-		mode:         config.Mode,
-		directory:    config.Directory,
-		panel:        panel,
-		footer:       footer,
-		layout:       layout,
-		content:      make([]string, 0),
-		width:        80,
-		height:       24,
-		scrollOffset: 0,
+		title:          config.Title,
+		version:        config.Version,
+		mode:           config.Mode,
+		directory:      config.Directory,
+		panel:          panel,
+		footer:         footer,
+		layout:         layout,
+		content:        make([]string, 0),
+		width:          80,
+		height:         24,
+		scrollOffset:   0,
+		commandManager: cmdManager,
+		toolRegistry:   config.ToolRegistry,
+		metadata:       make(map[string]interface{}),
+		shouldExit:     false,
+		ctx:            context.Background(),
 	}
 
 	return app
@@ -67,6 +102,11 @@ func (a *Application) Init() tea.Cmd {
 
 // Update handles messages (implements tea.Model)
 func (a *Application) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	// Check if we should exit
+	if a.shouldExit {
+		return a, tea.Quit
+	}
+
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		a.width = msg.Width
@@ -89,9 +129,22 @@ func (a *Application) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "ctrl+c", "q":
+		case "ctrl+c":
 			return a, tea.Quit
 		}
+
+	case CommandMsg:
+		// Handle command execution
+		if a.commandManager != nil {
+			if err := a.commandManager.Handle(a.ctx, msg.Input, a); err != nil {
+				a.AddLine("Error: " + err.Error())
+			}
+		}
+		// Check if command requested exit
+		if a.shouldExit {
+			return a, tea.Quit
+		}
+		return a, nil
 	}
 
 	return a, nil
@@ -238,4 +291,59 @@ func (a *Application) getVisibleLines(height int) []string {
 	}
 
 	return a.content[start:end]
+}
+
+// ApplicationState interface implementation
+
+// GetMode returns the current application mode
+func (a *Application) GetMode() string {
+	return a.mode
+}
+
+// GetMetadata returns application metadata
+func (a *Application) GetMetadata() map[string]interface{} {
+	return a.metadata
+}
+
+// SetMetadata sets application metadata
+func (a *Application) SetMetadata(key string, value interface{}) {
+	a.metadata[key] = value
+}
+
+// Exit signals the application to exit
+func (a *Application) Exit() {
+	a.shouldExit = true
+}
+
+// Command system helper methods
+
+// RegisterCommand registers a custom command
+func (a *Application) RegisterCommand(cmd commands.Command) error {
+	if a.commandManager == nil {
+		return nil // Commands not enabled
+	}
+	return a.commandManager.RegisterCommand(cmd)
+}
+
+// UnregisterCommand removes a command
+func (a *Application) UnregisterCommand(name string) error {
+	if a.commandManager == nil {
+		return nil // Commands not enabled
+	}
+	return a.commandManager.UnregisterCommand(name)
+}
+
+// GetCommandManager returns the command manager for advanced usage
+func (a *Application) GetCommandManager() *commands.Manager {
+	return a.commandManager
+}
+
+// CommandMsg is a message for executing a slash command
+type CommandMsg struct {
+	Input string
+}
+
+// NewCommandMsg creates a new command message
+func NewCommandMsg(input string) CommandMsg {
+	return CommandMsg{Input: input}
 }

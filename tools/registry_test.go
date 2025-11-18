@@ -67,7 +67,7 @@ func TestGet(t *testing.T) {
 	registry := NewToolRegistry()
 	tool := &mockTool{name: "test"}
 
-	registry.Register(tool)
+	_ = registry.Register(tool)
 
 	retrieved, err := registry.Get("test")
 	if err != nil {
@@ -89,7 +89,7 @@ func TestUnregister(t *testing.T) {
 	registry := NewToolRegistry()
 	tool := &mockTool{name: "test"}
 
-	registry.Register(tool)
+	_ = registry.Register(tool)
 
 	err := registry.Unregister("test")
 	if err != nil {
@@ -112,8 +112,8 @@ func TestList(t *testing.T) {
 	tool1 := &mockTool{name: "tool1"}
 	tool2 := &mockTool{name: "tool2"}
 
-	registry.Register(tool1)
-	registry.Register(tool2)
+	_ = registry.Register(tool1)
+	_ = registry.Register(tool2)
 
 	list := registry.List()
 	if len(list) != 2 {
@@ -139,7 +139,7 @@ func TestConcurrency(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		go func(n int) {
 			tool := &mockTool{name: string(rune('a' + n))}
-			registry.Register(tool)
+			_ = registry.Register(tool)
 			done <- true
 		}(i)
 	}

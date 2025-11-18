@@ -157,13 +157,13 @@ func TestDeleteTool_Execute_DirectoryRecursive(t *testing.T) {
 	}
 
 	// Create some files in the directory
-	os.WriteFile(filepath.Join(testDir, "file1.txt"), []byte("content1"), 0644)
-	os.WriteFile(filepath.Join(testDir, "file2.txt"), []byte("content2"), 0644)
+	_ = os.WriteFile(filepath.Join(testDir, "file1.txt"), []byte("content1"), 0644)
+	_ = os.WriteFile(filepath.Join(testDir, "file2.txt"), []byte("content2"), 0644)
 
 	// Create a subdirectory with a file
 	subDir := filepath.Join(testDir, "subdir")
-	os.Mkdir(subDir, 0755)
-	os.WriteFile(filepath.Join(subDir, "file3.txt"), []byte("content3"), 0644)
+	_ = os.Mkdir(subDir, 0755)
+	_ = os.WriteFile(filepath.Join(subDir, "file3.txt"), []byte("content3"), 0644)
 
 	tool := NewDeleteTool()
 	ctx := context.Background()
@@ -253,8 +253,8 @@ func TestDeleteTool_Execute_DryRun_Directory(t *testing.T) {
 		t.Fatalf("Failed to create test directory: %v", err)
 	}
 
-	os.WriteFile(filepath.Join(testDir, "file1.txt"), []byte("content1"), 0644)
-	os.WriteFile(filepath.Join(testDir, "file2.txt"), []byte("content2"), 0644)
+	_ = os.WriteFile(filepath.Join(testDir, "file1.txt"), []byte("content1"), 0644)
+	_ = os.WriteFile(filepath.Join(testDir, "file2.txt"), []byte("content2"), 0644)
 
 	tool := NewDeleteTool()
 	ctx := context.Background()

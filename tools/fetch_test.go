@@ -105,7 +105,7 @@ func TestFetchTool_Execute_GET(t *testing.T) {
 		}
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Hello, World!"))
+		_, _ = w.Write([]byte("Hello, World!"))
 	}))
 	defer server.Close()
 
@@ -152,7 +152,7 @@ func TestFetchTool_Execute_POST(t *testing.T) {
 		}
 
 		w.WriteHeader(http.StatusCreated)
-		w.Write([]byte("Created"))
+		_, _ = w.Write([]byte("Created"))
 	}))
 	defer server.Close()
 
@@ -188,7 +188,7 @@ func TestFetchTool_Execute_WithHeaders(t *testing.T) {
 			t.Errorf("Expected custom header, got '%s'", r.Header.Get("X-Custom-Header"))
 		}
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		_, _ = w.Write([]byte("OK"))
 	}))
 	defer server.Close()
 
@@ -228,7 +228,7 @@ func TestFetchTool_Execute_BasicAuth(t *testing.T) {
 		}
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Authenticated"))
+		_, _ = w.Write([]byte("Authenticated"))
 	}))
 	defer server.Close()
 
@@ -270,7 +270,7 @@ func TestFetchTool_Execute_BearerAuth(t *testing.T) {
 		}
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Authenticated"))
+		_, _ = w.Write([]byte("Authenticated"))
 	}))
 	defer server.Close()
 
@@ -307,7 +307,7 @@ func TestFetchTool_Execute_APIKeyAuth(t *testing.T) {
 		}
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Authenticated"))
+		_, _ = w.Write([]byte("Authenticated"))
 	}))
 	defer server.Close()
 
@@ -338,7 +338,7 @@ func TestFetchTool_Execute_APIKeyAuth(t *testing.T) {
 func TestFetchTool_Execute_404(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("Not Found"))
+		_, _ = w.Write([]byte("Not Found"))
 	}))
 	defer server.Close()
 
@@ -389,7 +389,7 @@ func TestFetchTool_Execute_ResponseHeaders(t *testing.T) {
 		w.Header().Set("X-Custom-Response", "test-value")
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"status": "ok"}`))
+		_, _ = w.Write([]byte(`{"status": "ok"}`))
 	}))
 	defer server.Close()
 
@@ -422,7 +422,7 @@ func TestFetchTool_Execute_JSON(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"message": "success", "code": 200}`))
+		_, _ = w.Write([]byte(`{"message": "success", "code": 200}`))
 	}))
 	defer server.Close()
 
@@ -457,7 +457,7 @@ func TestFetchTool_Execute_Duration(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(100 * time.Millisecond)
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		_, _ = w.Write([]byte("OK"))
 	}))
 	defer server.Close()
 
@@ -488,7 +488,7 @@ func TestFetchTool_Execute_Duration(t *testing.T) {
 func TestFetchTool_Execute_Redirect(t *testing.T) {
 	redirectServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Final destination"))
+		_, _ = w.Write([]byte("Final destination"))
 	}))
 	defer redirectServer.Close()
 
@@ -525,7 +525,7 @@ func TestFetchTool_Execute_Size(t *testing.T) {
 	content := "This is a test response with some content"
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(content))
+		_, _ = w.Write([]byte(content))
 	}))
 	defer server.Close()
 

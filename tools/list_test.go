@@ -69,9 +69,9 @@ func TestListTool_Execute_BasicListing(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create test files
-	os.WriteFile(filepath.Join(tmpDir, "file1.txt"), []byte("content1"), 0644)
-	os.WriteFile(filepath.Join(tmpDir, "file2.txt"), []byte("content2"), 0644)
-	os.WriteFile(filepath.Join(tmpDir, "file3.md"), []byte("content3"), 0644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "file1.txt"), []byte("content1"), 0644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "file2.txt"), []byte("content2"), 0644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "file3.md"), []byte("content3"), 0644)
 
 	tool := NewListTool()
 	ctx := context.Background()
@@ -104,9 +104,9 @@ func TestListTool_Execute_WithPattern(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create test files
-	os.WriteFile(filepath.Join(tmpDir, "file1.txt"), []byte("content1"), 0644)
-	os.WriteFile(filepath.Join(tmpDir, "file2.txt"), []byte("content2"), 0644)
-	os.WriteFile(filepath.Join(tmpDir, "file3.md"), []byte("content3"), 0644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "file1.txt"), []byte("content1"), 0644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "file2.txt"), []byte("content2"), 0644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "file3.md"), []byte("content3"), 0644)
 
 	tool := NewListTool()
 	ctx := context.Background()
@@ -140,9 +140,9 @@ func TestListTool_Execute_WithInclude(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create test files
-	os.WriteFile(filepath.Join(tmpDir, "file1.txt"), []byte("content1"), 0644)
-	os.WriteFile(filepath.Join(tmpDir, "file2.md"), []byte("content2"), 0644)
-	os.WriteFile(filepath.Join(tmpDir, "file3.go"), []byte("content3"), 0644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "file1.txt"), []byte("content1"), 0644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "file2.md"), []byte("content2"), 0644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "file3.go"), []byte("content3"), 0644)
 
 	tool := NewListTool()
 	ctx := context.Background()
@@ -169,9 +169,9 @@ func TestListTool_Execute_WithExclude(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create test files
-	os.WriteFile(filepath.Join(tmpDir, "file1.txt"), []byte("content1"), 0644)
-	os.WriteFile(filepath.Join(tmpDir, "file2.tmp"), []byte("content2"), 0644)
-	os.WriteFile(filepath.Join(tmpDir, "file3.log"), []byte("content3"), 0644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "file1.txt"), []byte("content1"), 0644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "file2.tmp"), []byte("content2"), 0644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "file3.log"), []byte("content3"), 0644)
 
 	tool := NewListTool()
 	ctx := context.Background()
@@ -202,17 +202,17 @@ func TestListTool_Execute_Recursive(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create test files in root
-	os.WriteFile(filepath.Join(tmpDir, "file1.txt"), []byte("content1"), 0644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "file1.txt"), []byte("content1"), 0644)
 
 	// Create subdirectory with files
 	subDir := filepath.Join(tmpDir, "subdir")
-	os.Mkdir(subDir, 0755)
-	os.WriteFile(filepath.Join(subDir, "file2.txt"), []byte("content2"), 0644)
+	_ = os.Mkdir(subDir, 0755)
+	_ = os.WriteFile(filepath.Join(subDir, "file2.txt"), []byte("content2"), 0644)
 
 	// Create nested subdirectory with files
 	nestedDir := filepath.Join(subDir, "nested")
-	os.Mkdir(nestedDir, 0755)
-	os.WriteFile(filepath.Join(nestedDir, "file3.txt"), []byte("content3"), 0644)
+	_ = os.Mkdir(nestedDir, 0755)
+	_ = os.WriteFile(filepath.Join(nestedDir, "file3.txt"), []byte("content3"), 0644)
 
 	tool := NewListTool()
 	ctx := context.Background()
@@ -240,14 +240,14 @@ func TestListTool_Execute_RecursiveWithPattern(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create test files
-	os.WriteFile(filepath.Join(tmpDir, "file1.txt"), []byte("content1"), 0644)
-	os.WriteFile(filepath.Join(tmpDir, "file2.md"), []byte("content2"), 0644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "file1.txt"), []byte("content1"), 0644)
+	_ = os.WriteFile(filepath.Join(tmpDir, "file2.md"), []byte("content2"), 0644)
 
 	// Create subdirectory with files
 	subDir := filepath.Join(tmpDir, "subdir")
-	os.Mkdir(subDir, 0755)
-	os.WriteFile(filepath.Join(subDir, "file3.txt"), []byte("content3"), 0644)
-	os.WriteFile(filepath.Join(subDir, "file4.md"), []byte("content4"), 0644)
+	_ = os.Mkdir(subDir, 0755)
+	_ = os.WriteFile(filepath.Join(subDir, "file3.txt"), []byte("content3"), 0644)
+	_ = os.WriteFile(filepath.Join(subDir, "file4.md"), []byte("content4"), 0644)
 
 	tool := NewListTool()
 	ctx := context.Background()
@@ -296,7 +296,7 @@ func TestListTool_Execute_NonExistentPath(t *testing.T) {
 func TestListTool_Execute_NotADirectory(t *testing.T) {
 	tmpDir := t.TempDir()
 	testFile := filepath.Join(tmpDir, "file.txt")
-	os.WriteFile(testFile, []byte("content"), 0644)
+	_ = os.WriteFile(testFile, []byte("content"), 0644)
 
 	tool := NewListTool()
 	ctx := context.Background()
@@ -338,7 +338,7 @@ func TestListTool_Execute_EmptyDirectory(t *testing.T) {
 func TestListTool_Execute_FileMetadata(t *testing.T) {
 	tmpDir := t.TempDir()
 	testFile := filepath.Join(tmpDir, "test.txt")
-	os.WriteFile(testFile, []byte("test content"), 0644)
+	_ = os.WriteFile(testFile, []byte("test content"), 0644)
 
 	tool := NewListTool()
 	ctx := context.Background()

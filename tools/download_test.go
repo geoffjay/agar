@@ -83,7 +83,7 @@ func TestDownloadTool_Execute_SimpleDownload(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/octet-stream")
 		w.WriteHeader(http.StatusOK)
-		w.Write(content)
+		_, _ = w.Write(content)
 	}))
 	defer server.Close()
 
@@ -138,7 +138,7 @@ func TestDownloadTool_Execute_WithMD5(t *testing.T) {
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write(content)
+		_, _ = w.Write(content)
 	}))
 	defer server.Close()
 
@@ -182,7 +182,7 @@ func TestDownloadTool_Execute_WithSHA256(t *testing.T) {
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write(content)
+		_, _ = w.Write(content)
 	}))
 	defer server.Close()
 
@@ -217,7 +217,7 @@ func TestDownloadTool_Execute_ChecksumMismatch(t *testing.T) {
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write(content)
+		_, _ = w.Write(content)
 	}))
 	defer server.Close()
 
@@ -257,11 +257,11 @@ func TestDownloadTool_Execute_Resume(t *testing.T) {
 			// Resume request
 			w.Header().Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", partialSize, len(fullContent)-1, len(fullContent)))
 			w.WriteHeader(http.StatusPartialContent)
-			w.Write(fullContent[partialSize:])
+			_, _ = w.Write(fullContent[partialSize:])
 		} else {
 			// Full download
 			w.WriteHeader(http.StatusOK)
-			w.Write(fullContent)
+			_, _ = w.Write(fullContent)
 		}
 	}))
 	defer server.Close()
@@ -320,7 +320,7 @@ func TestDownloadTool_Execute_CreateDirectory(t *testing.T) {
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write(content)
+		_, _ = w.Write(content)
 	}))
 	defer server.Close()
 
@@ -357,7 +357,7 @@ func TestDownloadTool_Execute_Duration(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(100 * time.Millisecond)
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		_, _ = w.Write([]byte("OK"))
 	}))
 	defer server.Close()
 
