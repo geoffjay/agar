@@ -285,11 +285,23 @@ func (m PromptModel) View() string {
 
 		for i := 0; i < maxShow; i++ {
 			cmd := m.completions[i]
+
+			// Build command display with aliases
+			cmdDisplay := cmd
+			if m.commandManager != nil {
+				if cmdInfo, err := m.commandManager.GetCommand(cmd); err == nil {
+					// Add aliases inline if present
+					if len(cmdInfo.Aliases()) > 0 {
+						cmdDisplay = fmt.Sprintf("%s (%s)", cmd, strings.Join(cmdInfo.Aliases(), ", "))
+					}
+				}
+			}
+
 			if i == m.completionIndex {
 				// Highlight selected completion
-				b.WriteString(SuccessStyle.Render("  ▸ /" + cmd))
+				b.WriteString(SuccessStyle.Render("  ▸ /" + cmdDisplay))
 			} else {
-				b.WriteString(HelpStyle.Render("    /" + cmd))
+				b.WriteString(HelpStyle.Render("    /" + cmdDisplay))
 			}
 
 			// Show command description if available

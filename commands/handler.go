@@ -71,8 +71,8 @@ func (h *Handler) GetCompletions(input string) []string {
 	// Remove leading "/"
 	input = strings.TrimPrefix(input, "/")
 
-	// Get all command names
-	names := h.registry.Names()
+	// Get only primary command names (not aliases)
+	names := h.registry.CommandNames()
 
 	// If input is empty, return all commands
 	if input == "" {

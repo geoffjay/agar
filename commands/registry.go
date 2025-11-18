@@ -152,6 +152,22 @@ func (r *Registry) Names() []string {
 	return names
 }
 
+// CommandNames returns only the primary command names (excludes aliases)
+func (r *Registry) CommandNames() []string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	names := make([]string, 0, len(r.commands))
+
+	// Add only command names (not aliases)
+	for name := range r.commands {
+		names = append(names, name)
+	}
+
+	sort.Strings(names)
+	return names
+}
+
 // Count returns the number of registered commands
 func (r *Registry) Count() int {
 	r.mu.RLock()
