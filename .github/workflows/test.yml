@@ -41,8 +41,11 @@ jobs:
           go mod download
           cd cmd/agar && go mod download
 
-      - name: Run library tests
-        run: go test ./tools/... ./tui/... -v -race -coverprofile=coverage.out -covermode=atomic
+      - name: Run library tests with race detector
+        run: go test ./tools/... ./tui/... -v -race
+
+      - name: Run library tests with coverage
+        run: go test ./tools/... ./tui/... -v -coverprofile=coverage.out -covermode=atomic
 
       - name: Run CLI tests
         run: cd cmd/agar && go test ./... -v -race
