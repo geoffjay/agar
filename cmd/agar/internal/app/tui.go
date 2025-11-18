@@ -113,8 +113,28 @@ func (m cliModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case tui.PromptSubmitMsg:
-		// Process the submitted command
-		m.handleCommand(msg.Input)
+		input := strings.TrimSpace(msg.Input)
+
+		// Check if this is a slash command
+		if strings.HasPrefix(input, "/") {
+			// Echo the command to the output
+			m.app.AddLine("")
+			m.app.AddLine(lipgloss.NewStyle().Foreground(lipgloss.Color("86")).Render("> " + input))
+
+			// Forward to Application's command system
+			updatedApp, appCmd := m.app.Update(tui.NewCommandMsg(input))
+			m.app = updatedApp.(*tui.Application)
+
+			// Update prompt to clear it
+			updated, cmd := m.prompt.Update(msg)
+			m.prompt = updated.(tui.PromptModel)
+
+			// Combine commands (appCmd may be tea.Quit if exit was called)
+			return m, tea.Batch(appCmd, cmd)
+		}
+
+		// Process non-slash commands with the hardcoded handler
+		m.handleCommand(input)
 
 		// Update prompt to clear it
 		updated, cmd := m.prompt.Update(msg)

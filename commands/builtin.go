@@ -108,27 +108,29 @@ func (c *HelpCommand) Execute(ctx context.Context, args []string, state Applicat
 		return nil
 	}
 
-	// Find max name length for formatting
+	// Find max command+aliases length for formatting
 	maxLen := 0
 	for _, cmd := range commands {
-		if len(cmd.Name()) > maxLen {
-			maxLen = len(cmd.Name())
+		nameWithAliases := cmd.Name()
+		if len(cmd.Aliases()) > 0 {
+			nameWithAliases = fmt.Sprintf("%s (%s)", cmd.Name(), strings.Join(cmd.Aliases(), ", "))
+		}
+		if len(nameWithAliases) > maxLen {
+			maxLen = len(nameWithAliases)
 		}
 	}
 
 	// Display each command
 	for _, cmd := range commands {
-		padding := strings.Repeat(" ", maxLen-len(cmd.Name())+2)
-		line := fmt.Sprintf("  /%s%s- %s", cmd.Name(), padding, cmd.Description())
-		state.AddLine(line)
-
-		// Show aliases if any
+		// Format command name with aliases
+		nameWithAliases := cmd.Name()
 		if len(cmd.Aliases()) > 0 {
-			aliasLine := fmt.Sprintf("    %sAliases: %s",
-				strings.Repeat(" ", maxLen),
-				strings.Join(cmd.Aliases(), ", "))
-			state.AddLine(aliasLine)
+			nameWithAliases = fmt.Sprintf("%s (%s)", cmd.Name(), strings.Join(cmd.Aliases(), ", "))
 		}
+
+		padding := strings.Repeat(" ", maxLen-len(nameWithAliases)+2)
+		line := fmt.Sprintf("  /%s%s- %s", nameWithAliases, padding, cmd.Description())
+		state.AddLine(line)
 	}
 
 	state.AddLine("")

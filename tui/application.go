@@ -130,6 +130,10 @@ func (a *Application) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				a.AddLine("Error: " + err.Error())
 			}
 		}
+		// Check if command requested exit
+		if a.shouldExit {
+			return a, tea.Quit
+		}
 		return a, nil
 	}
 
