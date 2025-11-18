@@ -223,9 +223,43 @@ Commands are automatically discovered from configured paths.
 
 ## Release Process
 
-The project uses automated GitHub Actions releases:
+The project supports both manual and automated releases:
 
-**Manual Release (Specific Version)**:
+### Manual Release (Recommended)
+
+Use the release script for manual control over releases:
+
+```bash
+# Release a specific version
+make release VERSION=v1.2.3
+
+# Auto-increment patch version from latest tag
+make release
+
+# Preview changes without making them
+make release-dry VERSION=v1.2.3
+
+# Skip tests during release (not recommended)
+SKIP_TESTS=1 make release VERSION=v1.2.3
+```
+
+The release script (`scripts/release.sh`):
+1. Validates version format and checks working directory is clean
+2. Runs tests to ensure code quality
+3. Tags and releases library with `vX.Y.Z`
+4. Updates CLI `go.mod` (removes `replace`, adds library version)
+5. Tags and releases CLI with `cmd/agar/vX.Y.Z`
+6. Restores `replace` directive for development
+7. Creates GitHub releases for both library and CLI
+
+**Requirements**:
+- Clean git working directory (no uncommitted changes)
+- GitHub CLI (`gh`) installed and authenticated
+- On `main` branch (or will warn)
+
+### Automated Release via GitHub Actions
+
+**Via Release Branch**:
 
 ```bash
 git checkout -b release/v1.2.3
@@ -233,19 +267,13 @@ git push origin release/v1.2.3
 # Create PR to main → merge triggers release with v1.2.3
 ```
 
-**Automatic Release (Patch Increment)**:
+**Auto-increment**:
 
 ```bash
 # Any PR merged to main without release/ prefix auto-increments patch version
 ```
 
-The release workflow:
-
-1. Tags library with `vX.Y.Z`
-2. Updates CLI to use new library version
-3. Tags CLI with `cmd/agar/vX.Y.Z`
-4. Creates GitHub releases
-5. Restores `replace` directive for development
+The automated workflow mirrors the manual script process.
 
 ## Important Considerations
 

@@ -1,4 +1,4 @@
-.PHONY: build test test-lib test-cli test-all clean help
+.PHONY: build test test-lib test-cli test-all clean release release-dry help
 
 # Build the Agar CLI
 build:
@@ -32,15 +32,32 @@ clean:
 	@rm -f examples/*/[!.]*.go.out examples/*/*_demo
 	@echo "✓ Clean complete"
 
+# Create a new release (specify VERSION=vX.Y.Z or auto-increment)
+release:
+	@./scripts/release.sh $(VERSION)
+
+# Preview release changes without making them
+release-dry:
+	@DRY_RUN=1 ./scripts/release.sh $(VERSION)
+
 # Show available targets
 help:
 	@echo "Agar Makefile Targets:"
 	@echo ""
-	@echo "  build      Build the Agar CLI"
-	@echo "  test       Run all tests (alias for test-all)"
-	@echo "  test-lib   Run library tests only"
-	@echo "  test-cli   Run CLI tests only"
-	@echo "  test-all   Run all tests (excluding examples)"
-	@echo "  clean      Remove build artifacts"
-	@echo "  help       Show this help message"
+	@echo "Build & Test:"
+	@echo "  build         Build the Agar CLI"
+	@echo "  test          Run all tests (alias for test-all)"
+	@echo "  test-lib      Run library tests only"
+	@echo "  test-cli      Run CLI tests only"
+	@echo "  test-all      Run all tests (excluding examples)"
+	@echo "  clean         Remove build artifacts"
+	@echo ""
+	@echo "Release:"
+	@echo "  release       Create a new release"
+	@echo "                Usage: make release VERSION=v1.2.3"
+	@echo "                       make release (auto-increment patch)"
+	@echo "  release-dry   Preview release without making changes"
+	@echo ""
+	@echo "Other:"
+	@echo "  help          Show this help message"
 	@echo ""
