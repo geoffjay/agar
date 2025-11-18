@@ -19,8 +19,8 @@ github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f h1:Y/CXytFA4m6baUTXGLOoWe4PQhGxaX0KpnayAqC48p4=
 github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f/go.mod h1:vw97MGsxSvLiUE2X8qFplwetxpGLQrlU1Q9AUEIzCaM=
-github.com/geoffjay/agar v0.1.0 h1:LToTrgR2jZe0dI9imGJSGzVBQApzgyXqvZ6C3KPDOuU=
-github.com/geoffjay/agar v0.1.0/go.mod h1:fBVpdX4RAWRReIL7P2MhIrPu1dlbXhoClniG9phnTxQ=
+github.com/geoffjay/agar v0.0.1 h1:2Sy+4lJHVU/3An5RW6/41Q4kyseznVsLmLgwt9raBmA=
+github.com/geoffjay/agar v0.0.1/go.mod h1:fBVpdX4RAWRReIL7P2MhIrPu1dlbXhoClniG9phnTxQ=
 github.com/ghetzel/testify v1.4.1 h1:wpJirdM+znAnxWruGDBdIys5aU+wGJHNUTkgEo4PYwk=
 github.com/ghetzel/testify v1.4.1/go.mod h1:FwvFn1OiGEUgzhS3ySCjTBG7/sez0WRvOAxz5uQU8so=
 github.com/google/go-cmp v0.5.5 h1:Khx7svrCpmxxtHBq5j2mp/xVjsi8hQMfNLvJFAlrGgU=
