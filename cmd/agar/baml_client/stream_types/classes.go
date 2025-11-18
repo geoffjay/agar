@@ -105,6 +105,61 @@ func (u AgarAppConfig) BamlEncodeName() *cffi.CFFITypeName {
 	}
 }
 
+type AgentResponse struct {
+	Response    *string  `json:"response"`
+	Suggestions []string `json:"suggestions"`
+}
+
+func (c *AgentResponse) Decode(holder *cffi.CFFIValueClass, typeMap baml.TypeMap) {
+	typeName := holder.Name
+	if typeName.Namespace != cffi.CFFITypeNamespace_STREAM_TYPES {
+		panic(fmt.Sprintf("expected cffi.CFFITypeNamespace_STREAM_TYPES, got %s", string(typeName.Namespace.String())))
+	}
+	if typeName.Name != "AgentResponse" {
+		panic(fmt.Sprintf("expected AgentResponse, got %s", typeName.Name))
+	}
+
+	for _, field := range holder.Fields {
+		key := field.Key
+		valueHolder := field.Value
+		switch key {
+
+		case "response":
+			c.Response = baml.Decode(valueHolder).Interface().(*string)
+
+		case "suggestions":
+			c.Suggestions = baml.Decode(valueHolder).Interface().([]string)
+
+		default:
+
+			panic(fmt.Sprintf("unexpected field: %s in class AgentResponse", key))
+
+		}
+	}
+
+}
+
+func (c AgentResponse) Encode() (*cffi.CFFIValueHolder, error) {
+	fields := map[string]any{}
+
+	fields["response"] = c.Response
+
+	fields["suggestions"] = c.Suggestions
+
+	return baml.EncodeClass(c.BamlEncodeName, fields, nil)
+}
+
+func (c AgentResponse) BamlTypeName() string {
+	return "AgentResponse"
+}
+
+func (u AgentResponse) BamlEncodeName() *cffi.CFFITypeName {
+	return &cffi.CFFITypeName{
+		Namespace: cffi.CFFITypeNamespace_STREAM_TYPES,
+		Name:      "AgentResponse",
+	}
+}
+
 type ComponentConfig struct {
 	Type   *string `json:"type"`
 	Name   *string `json:"name"`
@@ -163,6 +218,61 @@ func (u ComponentConfig) BamlEncodeName() *cffi.CFFITypeName {
 	return &cffi.CFFITypeName{
 		Namespace: cffi.CFFITypeNamespace_STREAM_TYPES,
 		Name:      "ComponentConfig",
+	}
+}
+
+type ConversationMessage struct {
+	Role    *string `json:"role"`
+	Content *string `json:"content"`
+}
+
+func (c *ConversationMessage) Decode(holder *cffi.CFFIValueClass, typeMap baml.TypeMap) {
+	typeName := holder.Name
+	if typeName.Namespace != cffi.CFFITypeNamespace_STREAM_TYPES {
+		panic(fmt.Sprintf("expected cffi.CFFITypeNamespace_STREAM_TYPES, got %s", string(typeName.Namespace.String())))
+	}
+	if typeName.Name != "ConversationMessage" {
+		panic(fmt.Sprintf("expected ConversationMessage, got %s", typeName.Name))
+	}
+
+	for _, field := range holder.Fields {
+		key := field.Key
+		valueHolder := field.Value
+		switch key {
+
+		case "role":
+			c.Role = baml.Decode(valueHolder).Interface().(*string)
+
+		case "content":
+			c.Content = baml.Decode(valueHolder).Interface().(*string)
+
+		default:
+
+			panic(fmt.Sprintf("unexpected field: %s in class ConversationMessage", key))
+
+		}
+	}
+
+}
+
+func (c ConversationMessage) Encode() (*cffi.CFFIValueHolder, error) {
+	fields := map[string]any{}
+
+	fields["role"] = c.Role
+
+	fields["content"] = c.Content
+
+	return baml.EncodeClass(c.BamlEncodeName, fields, nil)
+}
+
+func (c ConversationMessage) BamlTypeName() string {
+	return "ConversationMessage"
+}
+
+func (u ConversationMessage) BamlEncodeName() *cffi.CFFITypeName {
+	return &cffi.CFFITypeName{
+		Namespace: cffi.CFFITypeNamespace_STREAM_TYPES,
+		Name:      "ConversationMessage",
 	}
 }
 

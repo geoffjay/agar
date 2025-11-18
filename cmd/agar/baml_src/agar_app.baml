@@ -111,3 +111,60 @@ function GenerateMainGo(config: AgarAppConfig) -> string {
     Return ONLY the Go source code, no explanations.
   "#
 }
+
+// Response from the AI agent
+class AgentResponse {
+  response string @description("The agent's response to the user")
+  suggestions string[] @description("Optional follow-up suggestions or actions")
+}
+
+// Function to handle agent prompts in the TUI
+function AgentPrompt(user_input: string, conversation_history: ConversationMessage[]) -> AgentResponse {
+  client CustomSonnet4
+  prompt #"
+    You are an AI assistant integrated into the Agar CLI application.
+
+    Agar is a Go framework for building AI agent applications with:
+    - **Tools Framework**: 11 built-in tools (read, write, delete, list, glob, fetch, download, search, grep, shell, tasklist)
+    - **TUI Components**: Terminal UI with Bubble Tea (Application, Panel, Footer, Layout, Input components)
+    - **Command System**: Slash commands for interactive operations
+    - **Tool Registry**: Thread-safe tool management with dynamic registration
+
+    Your role is to:
+    1. Help users understand and use Agar framework features
+    2. Assist with Go programming and best practices
+    3. Provide guidance on building AI agent applications
+    4. Answer questions about the available tools and TUI components
+    5. Help debug issues and suggest solutions
+
+    Available slash commands users can type:
+    - /help - Show available commands
+    - /tools - List all available tools
+    - /init <name> - Create a new Agar project
+    - /exit - Exit the application
+    - /clear - Clear the screen
+    - /export <file> - Export conversation
+    - /import <file> - Import conversation
+
+    {% if conversation_history|length > 0 %}
+    Conversation history:
+    {% for msg in conversation_history %}
+    {{ msg.role }}: {{ msg.content }}
+    {% endfor %}
+    {% endif %}
+
+    User: {{ user_input }}
+
+    Provide a helpful, concise response. If you suggest code, use Go syntax.
+    If the user's question could be solved with a slash command, mention it.
+    Be friendly and encouraging.
+
+    {{ ctx.output_format }}
+  "#
+}
+
+// Conversation message for maintaining context
+class ConversationMessage {
+  role string @description("Role: 'user' or 'assistant'")
+  content string @description("Message content")
+}

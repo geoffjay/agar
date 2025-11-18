@@ -1,22 +1,34 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/geoffjay/agar/cmd/agar/baml_client"
+	"github.com/geoffjay/agar/cmd/agar/baml_client/types"
 	"github.com/geoffjay/agar/tools"
 	"github.com/geoffjay/agar/tui"
 )
 
 // cliModel wraps the Application and Prompt components
 type cliModel struct {
-	app    *tui.Application
-	prompt tui.PromptModel
-	width  int
-	height int
+	app               *tui.Application
+	prompt            tui.PromptModel
+	width             int
+	height            int
+	conversationHist  []types.ConversationMessage
+	waitingForAgent   bool
+}
+
+// agentResponseMsg contains the response from the AI agent
+type agentResponseMsg struct {
+	response    string
+	suggestions []string
+	err         error
 }
 
 // RunTUI launches the TUI application
@@ -70,11 +82,14 @@ func RunTUI() error {
 	app.AddLine("")
 	app.AddLine("GETTING STARTED")
 	app.AddLine("")
-	app.AddLine("  Type /help to see all available slash commands")
-	app.AddLine("  Type /tools to see all available tools")
-	app.AddLine("  Type /init <name> to create a new Agar project")
+	app.AddLine("  Slash Commands:")
+	app.AddLine("    /help          - Show all available commands")
+	app.AddLine("    /tools         - List all available tools")
+	app.AddLine("    /init <name>   - Create a new Agar project")
 	app.AddLine("")
-	app.AddLine("  Enter any text without a leading / to submit it as a prompt")
+	app.AddLine("  AI Assistant:")
+	app.AddLine("    Type any message (without /) to chat with the AI assistant")
+	app.AddLine("    Ask about Agar features, Go programming, or get coding help")
 	app.AddLine("")
 	app.AddLine("─────────────────────────────────────────────────────────────────────────────────────────")
 	app.AddLine("")
@@ -94,10 +109,12 @@ func RunTUI() error {
 		WithCommandManager(cmdMgr)
 
 	model := cliModel{
-		app:    app,
-		prompt: prompt,
-		width:  80,
-		height: 24,
+		app:              app,
+		prompt:           prompt,
+		width:            80,
+		height:           24,
+		conversationHist: make([]types.ConversationMessage, 0),
+		waitingForAgent:  false,
 	}
 
 	// Run the application
@@ -164,15 +181,53 @@ func (m cliModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.app.AddLine(lipgloss.NewStyle().Foreground(lipgloss.Color("86")).Render("> " + input))
 		m.app.AddLine("")
 
-		// TODO: Submit to BAML/AI agent - for now just echo back
-		m.app.AddLine("AI response for: " + input)
-		m.app.AddLine("(Note: BAML integration pending)")
+		// Add user message to conversation history
+		m.conversationHist = append(m.conversationHist, types.ConversationMessage{
+			Role:    "user",
+			Content: input,
+		})
+
+		// Show loading indicator
+		m.app.AddLine(lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render("● Thinking..."))
 		m.app.AddLine("")
+		m.waitingForAgent = true
 
 		// Update prompt to clear it
 		updated, cmd := m.prompt.Update(msg)
 		m.prompt = updated.(tui.PromptModel)
-		return m, cmd
+
+		// Call agent in background
+		return m, tea.Batch(cmd, callAgentCmd(input, m.conversationHist))
+
+	case agentResponseMsg:
+		m.waitingForAgent = false
+
+		if msg.err != nil {
+			m.app.AddLine(lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Render("✗ Error: " + msg.err.Error()))
+			m.app.AddLine("")
+			return m, nil
+		}
+
+		// Add assistant response to conversation history
+		m.conversationHist = append(m.conversationHist, types.ConversationMessage{
+			Role:    "assistant",
+			Content: msg.response,
+		})
+
+		// Display response
+		m.app.AddLine(msg.response)
+		m.app.AddLine("")
+
+		// Display suggestions if any
+		if len(msg.suggestions) > 0 {
+			m.app.AddLine(lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render("Suggestions:"))
+			for _, suggestion := range msg.suggestions {
+				m.app.AddLine(lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render("  • " + suggestion))
+			}
+			m.app.AddLine("")
+		}
+
+		return m, nil
 	}
 
 	// Forward messages to prompt
@@ -250,4 +305,28 @@ func (m cliModel) View() string {
 	output.WriteString(m.app.GetFooter().View())
 
 	return output.String()
+}
+
+// callAgentCmd creates a command that calls the BAML agent
+func callAgentCmd(userInput string, history []types.ConversationMessage) tea.Cmd {
+	return func() tea.Msg {
+		ctx := context.Background()
+
+		// Limit conversation history to last 10 messages to avoid token limits
+		historyToSend := history
+		if len(history) > 10 {
+			historyToSend = history[len(history)-10:]
+		}
+
+		// Call BAML agent
+		response, err := baml_client.AgentPrompt(ctx, userInput, historyToSend)
+		if err != nil {
+			return agentResponseMsg{err: err}
+		}
+
+		return agentResponseMsg{
+			response:    response.Response,
+			suggestions: response.Suggestions,
+		}
+	}
 }

@@ -21,6 +21,72 @@ import (
 	"github.com/geoffjay/agar/cmd/agar/baml_client/types"
 )
 
+func AgentPrompt(ctx context.Context, user_input string, conversation_history []types.ConversationMessage, opts ...CallOptionFunc) (types.AgentResponse, error) {
+
+	var callOpts callOption
+	for _, opt := range opts {
+		opt(&callOpts)
+	}
+
+	args := baml.BamlFunctionArguments{
+		Kwargs: map[string]any{"user_input": user_input, "conversation_history": conversation_history},
+		Env:    getEnvVars(callOpts.env),
+	}
+
+	if callOpts.clientRegistry != nil {
+		args.ClientRegistry = callOpts.clientRegistry
+	}
+
+	if callOpts.collectors != nil {
+		args.Collectors = callOpts.collectors
+	}
+
+	if callOpts.typeBuilder != nil {
+		args.TypeBuilder = callOpts.typeBuilder
+	}
+
+	if callOpts.tags != nil {
+		args.Tags = callOpts.tags
+	}
+
+	encoded, err := args.Encode()
+	if err != nil {
+		panic(err)
+	}
+
+	if callOpts.onTick == nil {
+		result, err := bamlRuntime.CallFunction(ctx, "AgentPrompt", encoded, callOpts.onTick)
+		if err != nil {
+			return types.AgentResponse{}, err
+		}
+
+		if result.Error != nil {
+			return types.AgentResponse{}, result.Error
+		}
+
+		casted := (result.Data).(types.AgentResponse)
+
+		return casted, nil
+	} else {
+		channel, err := bamlRuntime.CallFunctionStream(ctx, "AgentPrompt", encoded, callOpts.onTick)
+		if err != nil {
+			return types.AgentResponse{}, err
+		}
+
+		for result := range channel {
+			if result.Error != nil {
+				return types.AgentResponse{}, result.Error
+			}
+
+			if result.HasData {
+				return result.Data.(types.AgentResponse), nil
+			}
+		}
+
+		return types.AgentResponse{}, fmt.Errorf("No data returned from stream")
+	}
+}
+
 func CreateAgarApp(ctx context.Context, requirements string, project_name string, opts ...CallOptionFunc) (types.AgarAppConfig, error) {
 
 	var callOpts callOption

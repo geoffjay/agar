@@ -71,6 +71,42 @@ func (t *AgarAppConfigClassView) Type() (baml.Type, error) {
 	return t.inner.Type()
 }
 
+type AgentResponseClassView struct {
+	inner baml.ClassBuilder
+}
+
+func (t *AgentResponseClassView) ListProperties() ([]ClassPropertyView, error) {
+	result, err := t.inner.ListProperties()
+	if err != nil {
+		return nil, err
+	}
+	builders := make([]ClassPropertyView, len(result))
+	for i, p := range result {
+		builders[i] = p
+	}
+	return builders, nil
+}
+
+func (t *AgentResponseClassView) PropertyResponse() (ClassPropertyView, error) {
+	return t.inner.Property("response")
+}
+
+func (t *AgentResponseClassView) PropertySuggestions() (ClassPropertyView, error) {
+	return t.inner.Property("suggestions")
+}
+
+func (t *TypeBuilder) AgentResponse() (*AgentResponseClassView, error) {
+	bld, err := t.inner.Class("AgentResponse")
+	if err != nil {
+		return nil, err
+	}
+	return &AgentResponseClassView{inner: bld}, nil
+}
+
+func (t *AgentResponseClassView) Type() (baml.Type, error) {
+	return t.inner.Type()
+}
+
 type ComponentConfigClassView struct {
 	inner baml.ClassBuilder
 }
@@ -108,6 +144,42 @@ func (t *TypeBuilder) ComponentConfig() (*ComponentConfigClassView, error) {
 }
 
 func (t *ComponentConfigClassView) Type() (baml.Type, error) {
+	return t.inner.Type()
+}
+
+type ConversationMessageClassView struct {
+	inner baml.ClassBuilder
+}
+
+func (t *ConversationMessageClassView) ListProperties() ([]ClassPropertyView, error) {
+	result, err := t.inner.ListProperties()
+	if err != nil {
+		return nil, err
+	}
+	builders := make([]ClassPropertyView, len(result))
+	for i, p := range result {
+		builders[i] = p
+	}
+	return builders, nil
+}
+
+func (t *ConversationMessageClassView) PropertyRole() (ClassPropertyView, error) {
+	return t.inner.Property("role")
+}
+
+func (t *ConversationMessageClassView) PropertyContent() (ClassPropertyView, error) {
+	return t.inner.Property("content")
+}
+
+func (t *TypeBuilder) ConversationMessage() (*ConversationMessageClassView, error) {
+	bld, err := t.inner.Class("ConversationMessage")
+	if err != nil {
+		return nil, err
+	}
+	return &ConversationMessageClassView{inner: bld}, nil
+}
+
+func (t *ConversationMessageClassView) Type() (baml.Type, error) {
 	return t.inner.Type()
 }
 
